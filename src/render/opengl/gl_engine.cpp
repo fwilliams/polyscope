@@ -1480,9 +1480,9 @@ void GLShaderProgram::setIndex(std::vector<std::array<unsigned int, 3>>& indices
   unsigned int* rawData = new unsigned int[3 * indices.size()];
   indexSize = 3 * indices.size();
   for (unsigned int i = 0; i < indices.size(); i++) {
-    rawData[3 * i + 0] = static_cast<float>(indices[i][0]);
-    rawData[3 * i + 1] = static_cast<float>(indices[i][1]);
-    rawData[3 * i + 2] = static_cast<float>(indices[i][2]);
+    rawData[3 * i + 0] = static_cast<unsigned int>(indices[i][0]);
+    rawData[3 * i + 1] = static_cast<unsigned int>(indices[i][1]);
+    rawData[3 * i + 2] = static_cast<unsigned int>(indices[i][2]);
   }
 
   glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, indexVBO);
@@ -2056,6 +2056,7 @@ void GLEngine::populateDefaultShadersAndRules() {
   // == Load general base shaders
   registeredShaderPrograms.insert({"MESH", {{FLEX_MESH_VERT_SHADER, FLEX_MESH_FRAG_SHADER}, DrawMode::Triangles}});
   registeredShaderPrograms.insert({"SLICE_TETS", {{SLICE_TETS_VERT_SHADER, SLICE_TETS_GEOM_SHADER, SLICE_TETS_FRAG_SHADER}, DrawMode::Points}});
+  registeredShaderPrograms.insert({"INDEXED_MESH", {{FLEX_MESH_VERT_SHADER, FLEX_MESH_FRAG_SHADER}, DrawMode::IndexedTriangles}});
   registeredShaderPrograms.insert({"RAYCAST_SPHERE", {{FLEX_SPHERE_VERT_SHADER, FLEX_SPHERE_GEOM_SHADER, FLEX_SPHERE_FRAG_SHADER}, DrawMode::Points}});
   registeredShaderPrograms.insert({"POINT_QUAD", {{FLEX_POINTQUAD_VERT_SHADER, FLEX_POINTQUAD_GEOM_SHADER, FLEX_POINTQUAD_FRAG_SHADER}, DrawMode::Points}});
   registeredShaderPrograms.insert({"RAYCAST_VECTOR", {{FLEX_VECTOR_VERT_SHADER, FLEX_VECTOR_GEOM_SHADER, FLEX_VECTOR_FRAG_SHADER}, DrawMode::Points}});
