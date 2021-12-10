@@ -3,7 +3,7 @@
 
 #include "polyscope/internal.h"
 #include "polyscope/messages.h"
-#include "polyscope/options.h"
+#include "polyscope/options.h" 
 #include "polyscope/screenshot.h"
 #include "polyscope/slice_plane.h"
 #include "polyscope/structure.h"
@@ -87,9 +87,9 @@ Structure* getStructure(std::string type, std::string name = "");
 bool hasStructure(std::string type, std::string name = "");
 
 // De-register a structure, of any type. Also removes any quantities associated with the structure
-void removeStructure(Structure* structure, bool errorIfAbsent = true);
-void removeStructure(std::string type, std::string name, bool errorIfAbsent = true);
-void removeStructure(std::string name, bool errorIfAbsent = true);
+void removeStructure(Structure* structure, bool errorIfAbsent = false);
+void removeStructure(std::string type, std::string name, bool errorIfAbsent = false);
+void removeStructure(std::string name, bool errorIfAbsent = false);
 
 // De-register all structures, of any type. Also removes any quantities associated with the structure
 void removeAllStructures();
