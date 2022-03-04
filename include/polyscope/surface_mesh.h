@@ -74,8 +74,7 @@ public:
 
   // Render the the structure on screen
   virtual void draw() override;
-
-  // Render for picking
+  virtual void drawDelayed() override;
   virtual void drawPick() override;
 
   virtual void updateObjectSpaceBounds() override;
