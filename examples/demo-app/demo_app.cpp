@@ -6,6 +6,7 @@
 #include "polyscope/curve_network.h"
 #include "polyscope/file_helpers.h"
 #include "polyscope/floating_quantity_structure.h"
+#include "polyscope/implicit_surface.h"
 #include "polyscope/point_cloud.h"
 #include "polyscope/surface_mesh.h"
 #include "polyscope/surface_mesh_io.h"
@@ -489,6 +490,37 @@ void loadFloatingImageData(polyscope::PointCloud* targetCloud = nullptr) {
   }
 }
 
+void addImplicitRendersFromCurrentView() {
+
+  // sample sdf
+  auto torusSDF = [](glm::vec3 p) {
+    float scale = 0.5;
+    p /= scale;
+    p += glm::vec3{1., 0., 1.};
+    glm::vec2 t{1., 0.3};
+    glm::vec2 pxz{p.x, p.z};
+    glm::vec2 q = glm::vec2(glm::length(pxz) - t.x, p.y);
+    return (glm::length(q) - t.y) * scale;
+  };
+  auto boxFrameSDF = [](glm::vec3 p) {
+    float scale = 0.5;
+    p /= scale;
+    float b = 1.;
+    float e = 0.1;
+    p = glm::abs(p) - b;
+    glm::vec3 q = glm::abs(p + e) - e;
+    float out = glm::min(
+        glm::min(
+            glm::length(glm::max(glm::vec3(p.x, q.y, q.z), 0.0f)) + glm::min(glm::max(p.x, glm::max(q.y, q.z)), 0.0f),
+            glm::length(glm::max(glm::vec3(q.x, p.y, q.z), 0.0f)) + glm::min(glm::max(q.x, glm::max(p.y, q.z)), 0.0f)),
+        glm::length(glm::max(glm::vec3(q.x, q.y, p.z), 0.0f)) + glm::min(glm::max(q.x, glm::max(q.y, p.z)), 0.0f));
+    return out * scale;
+  };
+
+  polyscope::DepthRenderImage* img = polyscope::renderImplictSurfaceSphereMarch("torus sdf", torusSDF);
+  polyscope::DepthRenderImage* img2 = polyscope::renderImplictSurfaceSphereMarch("box sdf", boxFrameSDF);
+}
+
 void processFileDotMesh(std::string filename) {
   std::vector<std::array<double, 3>> verts;
   std::vector<std::array<int64_t, 8>> cells;
@@ -554,7 +586,7 @@ void addDataToPointCloud(string pointCloudName, const std::vector<glm::vec3>& po
   polyscope::getPointCloud(pointCloudName)->addVectorQuantity("unit 'normal' vector", centerNormalVec);
   polyscope::getPointCloud(pointCloudName)->addVectorQuantity("to zero", toZeroVec, polyscope::VectorType::AMBIENT);
 
-  loadFloatingImageData(polyscope::getPointCloud(pointCloudName));
+  // loadFloatingImageData(polyscope::getPointCloud(pointCloudName));
 }
 
 // PLY files get loaded as point clouds
@@ -615,6 +647,10 @@ void callback() {
     polyscope::warning("hi");
   }
 
+  if (ImGui::Button("add implicits")) {
+    addImplicitRendersFromCurrentView();
+  }
+
   ImGui::PopItemWidth();
 }
 
@@ -662,7 +698,7 @@ int main(int argc, char** argv) {
     addDataToPointCloud("really great points" + std::to_string(j), points);
   }
 
-  loadFloatingImageData();
+  // loadFloatingImageData();
 
   // Add a few gui elements
   polyscope::state::userCallback = callback;
