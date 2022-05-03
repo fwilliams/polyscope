@@ -134,11 +134,13 @@ bool registerStructure(Structure* structure, bool replaceIfPresent = true);
 class Quantity;
 template <typename S>
 class QuantityS;
-class FloatingQuantity;
 
+// Floating quantity things
 class FloatingQuantity;
 class FloatingScalarImageQuantity;
 class FloatingColorImageQuantity;
+class DepthRenderImage;
+class ColorRenderImage;
 
 // Helper used to define quantity types
 template <typename T>
@@ -202,12 +204,29 @@ public:
   FloatingColorImageQuantity* addFloatingColorAlphaImage(std::string name, size_t dimX, size_t dimY,
                                                          const T& values_rgba);
 
+  template <class T1, class T2>
+  DepthRenderImage* addDepthRenderImage(std::string name, size_t dimX, size_t dimY, const T1& depthData,
+                                        const T1& normalData);
+
+  template <class T1, class T2, class T3>
+  ColorRenderImage* addColorRenderImage(std::string name, size_t dimX, size_t dimY, const T1& depthData,
+                                        const T1& normalData, const T1& colorData);
+
   // === Floating Quantity impls
   FloatingScalarImageQuantity* addFloatingScalarImageImpl(std::string name, size_t dimX, size_t dimY,
                                                           const std::vector<double>& values, DataType type);
 
   FloatingColorImageQuantity* addFloatingColorImageImpl(std::string name, size_t dimX, size_t dimY,
                                                         const std::vector<glm::vec4>& values);
+
+  DepthRenderImage* addDepthRenderImageImpl(std::string name, size_t dimX, size_t dimY,
+                                            const std::vector<float>& depthData,
+                                            const std::vector<glm::vec3>& normalData);
+
+  ColorRenderImage* addColorRenderImageImpl(std::string name, size_t dimX, size_t dimY,
+                                            const std::vector<float>& depthData,
+                                            const std::vector<glm::vec3>& normalData,
+                                            const std::vector<glm::vec3>& colorData);
 
 protected:
   // helper
