@@ -897,6 +897,9 @@ void removeStructure(std::string type, std::string name, bool errorIfAbsent) {
 
   // Structure exists, remove it
   Structure* s = sMap[name];
+  if (static_cast<void*>(s) == static_cast<void*>(internal::globalFloatingQuantityStructure)) {
+    internal::globalFloatingQuantityStructure = nullptr;
+  }
   pick::resetSelectionIfStructure(s);
   sMap.erase(s->name);
   delete s;
