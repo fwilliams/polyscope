@@ -1082,6 +1082,7 @@ void GLShaderProgram::setAttribute(std::string name, const std::vector<glm::vec2
         glBindVertexArray(vaoHandle);
         glBindBuffer(GL_ARRAY_BUFFER, a.VBOLoc);
         if (update) {
+          // TODO: Detect if buffer has already been allocated and re-fill instead
           // TODO: Allow modifications to non-contiguous memory
           offset *= 2 * sizeof(float);
           if (size == -1)
