@@ -287,7 +287,7 @@ void GLFrameBuffer::setDrawBuffers() {
 bool GLFrameBuffer::bindForRendering() {
   bind();
   render::engine->currRenderFramebuffer = this;
-  render::engine->setCurrentViewport({0, 0, 400, 600});
+  render::engine->setCurrentViewport({0, 0, view::bufferWidth, view::bufferHeight});
   checkGLError();
   return true;
 }
@@ -1175,6 +1175,12 @@ void MockGLEngine::initialize() {
   GLFrameBuffer* glScreenBuffer = new GLFrameBuffer(view::bufferWidth, view::bufferHeight, true);
   displayBuffer.reset(glScreenBuffer);
 
+
+  // normally we get initial values for the buffer size from the window framework,
+  // with the mock backend we we need to manually set them to some sane value
+  view::bufferWidth = view::windowWidth;
+  view::bufferHeight = view::windowHeight;
+
   updateWindowSize();
 
   populateDefaultShadersAndRules();
@@ -1196,8 +1202,8 @@ void MockGLEngine::swapDisplayBuffers() {}
 
 std::vector<unsigned char> MockGLEngine::readDisplayBuffer() {
   // Get buffer size
-  int w = 400;
-  int h = 600;
+  int w = view::bufferWidth;
+  int h = view::bufferHeight;
 
   // Read from openGL
   size_t buffSize = w * h * 4;
@@ -1217,10 +1223,15 @@ void MockGLEngine::showWindow() {}
 void MockGLEngine::hideWindow() {}
 
 void MockGLEngine::updateWindowSize(bool force) {
-  int newBufferWidth = 400;
-  int newBufferHeight = 600;
-  int newWindowWidth = 400;
-  int newWindowHeight = 600;
+
+  // this silly code mimicks the gl backend version, but it is important that we preserve 
+  // the view::bufferWidth, etc, otherwise it is impossible to manually set the window size
+  // in the mock backend (which appears in unit tests, etc)
+  int newBufferWidth = view::bufferWidth;
+  int newBufferHeight = view::bufferHeight;
+  int newWindowWidth = view::windowWidth;
+  int newWindowHeight = view::windowHeight;
+
   if (force || newBufferWidth != view::bufferWidth || newBufferHeight != view::bufferHeight ||
       newWindowHeight != view::windowHeight || newWindowWidth != view::windowWidth) {
     // Basically a resize callback
@@ -1234,7 +1245,6 @@ void MockGLEngine::updateWindowSize(bool force) {
 
 
 void MockGLEngine::applyWindowSize() { updateWindowSize(true); }
-
 
 void MockGLEngine::setWindowResizable(bool newVal) {}
 
