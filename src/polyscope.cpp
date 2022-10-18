@@ -81,7 +81,7 @@ void readPrefsFile() {
   }
   // We never really care if something goes wrong while loading preferences, so eat all exceptions
   catch (...) {
-    polyscope::warning("Parsing of prefs file failed");
+    polyscope::warning("Parsing of prefs file .polyscope.ini failed");
   }
 }
 
@@ -155,9 +155,7 @@ void checkInitialized() {
   }
 }
 
-bool isInitialized() {
-  return state::initialized;
-}
+bool isInitialized() { return state::initialized; }
 
 void pushContext(std::function<void()> callbackFunction, bool drawDefaultUI) {
 
