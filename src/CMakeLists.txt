@@ -206,6 +206,8 @@ SET(HEADERS
   ${INCLUDE_ROOT}/camera_parameters.h
   ${INCLUDE_ROOT}/color_management.h
   ${INCLUDE_ROOT}/colors.h
+  ${INCLUDE_ROOT}/color_quantity.h
+  ${INCLUDE_ROOT}/color_quantity.ipp
   ${INCLUDE_ROOT}/combining_hash_functions.h
   ${INCLUDE_ROOT}/curve_network.h
   ${INCLUDE_ROOT}/curve_network.ipp
@@ -226,10 +228,8 @@ SET(HEADERS
   ${INCLUDE_ROOT}/point_cloud.h
   ${INCLUDE_ROOT}/point_cloud.ipp
   ${INCLUDE_ROOT}/point_cloud_color_quantity.h
-  ${INCLUDE_ROOT}/point_cloud_color_quantity.ipp
   ${INCLUDE_ROOT}/point_cloud_quantity.h
   ${INCLUDE_ROOT}/point_cloud_scalar_quantity.h
-  ${INCLUDE_ROOT}/point_cloud_scalar_quantity.ipp
   ${INCLUDE_ROOT}/point_cloud_parameterization_quantity.h
   ${INCLUDE_ROOT}/point_cloud_parameterization_quantity.ipp
   ${INCLUDE_ROOT}/point_cloud_vector_quantity.h
@@ -244,6 +244,8 @@ SET(HEADERS
   ${INCLUDE_ROOT}/render/materials.h
   ${INCLUDE_ROOT}/ribbon_artist.h
   ${INCLUDE_ROOT}/scaled_value.h
+  ${INCLUDE_ROOT}/scalar_quantity.h
+  ${INCLUDE_ROOT}/scalar_quantity.ipp
   ${INCLUDE_ROOT}/screenshot.h
   ${INCLUDE_ROOT}/slice_plane.h
   ${INCLUDE_ROOT}/standardize_data_array.h
