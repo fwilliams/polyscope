@@ -91,6 +91,7 @@ void processFileOBJ(string filename) {
     vertexPositionsGLM.push_back(glm::vec3{p[0], p[1], p[2]});
   }
   auto psMesh = polyscope::registerSurfaceMesh(niceName, vertexPositionsGLM, faceIndices);
+  return; // FIXME
 
   // Useful data
   size_t nVertices = psMesh->nVertices();
@@ -250,7 +251,7 @@ polyscope::warning("Some problems come in groups", "detail = " + std::to_string(
     psMesh->generateDefaultVertexTangentSpaces();
     psMesh->ensureHaveVertexTangentSpaces();
     for (size_t iV = 0; iV < nVertices; iV++) {
-      glm::vec3 pos = psMesh->vertices[iV];
+      glm::vec3 pos = vertexPositionsGLM[iV];
       glm::vec3 basisX = psMesh->vertexTangentSpaces[iV][0];
       glm::vec3 basisY = psMesh->vertexTangentSpaces[iV][1];
 
@@ -299,7 +300,7 @@ polyscope::warning("Some problems come in groups", "detail = " + std::to_string(
         size_t iE = psMesh->edgeIndices[iF][j];
 
         glm::vec3 v = spatialFunc(pos);
-        glm::vec3 edgeVec = psMesh->vertices[vB] - psMesh->vertices[vA];
+        glm::vec3 edgeVec = vertexPositionsGLM[vB] - vertexPositionsGLM[vA];
         edgeForm[iE] = glm::dot(edgeVec, v);
         edgeOrient[iE] = (vB > vA);
       }
