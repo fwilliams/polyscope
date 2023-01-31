@@ -20,12 +20,6 @@
 
 #include "simple_dot_mesh_parser.h"
 
-using std::cerr;
-using std::cout;
-using std::endl;
-using std::string;
-
-
 bool endsWith(const std::string& str, const std::string& suffix) {
   return str.size() >= suffix.size() && str.compare(str.size() - suffix.size(), suffix.size(), suffix) == 0;
 }
@@ -78,7 +72,7 @@ void constructDemoCurveNetwork(std::string curveName, std::vector<glm::vec3> nod
   }
 }
 
-void processFileOBJ(string filename) {
+void processFileOBJ(std::string filename) {
   // Get a nice name for the file
   std::string niceName = polyscope::guessNiceNameFromPath(filename);
 
@@ -245,8 +239,13 @@ polyscope::warning("Some problems come in groups", "detail = " + std::to_string(
       float zComp = C * std::sin(p.y) + B * std::cos(p.x);
       return glm::vec3{xComp, yComp, zComp};
     };
+    
+    // TODO commented out for now, need to manually construct tangent bases
+  
+    /*
 
     // At vertices
+    
     std::vector<glm::vec2> vertexIntrinsicVec(nVertices, glm::vec3{0., 0., 0.});
     psMesh->generateDefaultVertexTangentSpaces();
     psMesh->ensureHaveVertexTangentSpaces();
@@ -278,6 +277,7 @@ polyscope::warning("Some problems come in groups", "detail = " + std::to_string(
     }
     psMesh->addFaceIntrinsicVectorQuantity("intrinsic face vec", faceIntrinsicVec);
 
+
     // 1-form
     std::vector<double> edgeForm(nEdges, 0.);
     std::vector<char> edgeOrient(nEdges, false);
@@ -308,6 +308,8 @@ polyscope::warning("Some problems come in groups", "detail = " + std::to_string(
     if (isTriangle) {
       psMesh->addOneFormIntrinsicVectorQuantity("intrinsic 1-form", edgeForm, edgeOrient);
     }
+    
+    */
   }
 
 
@@ -462,7 +464,7 @@ void processFileDotMesh(std::string filename) {
   polyscope::getVolumeMesh(niceName)->addCellVectorQuantity("random vec2", randVecC);
 }
 
-void addDataToPointCloud(string pointCloudName, const std::vector<glm::vec3>& points) {
+void addDataToPointCloud(std::string pointCloudName, const std::vector<glm::vec3>& points) {
 
 
   // Add some scalar quantities
@@ -493,7 +495,7 @@ void addDataToPointCloud(string pointCloudName, const std::vector<glm::vec3>& po
 }
 
 // PLY files get loaded as point clouds
-void processFilePLY(string filename) {
+void processFilePLY(std::string filename) {
 
   // load the data
   happly::PLYData plyIn(filename);
@@ -517,7 +519,7 @@ void processFilePLY(string filename) {
 }
 
 
-void processFile(string filename) {
+void processFile(std::string filename) {
   // Dispatch to correct varient
   if (endsWith(filename, ".obj")) {
     processFileOBJ(filename);
@@ -527,7 +529,7 @@ void processFile(string filename) {
     // PLY files get loaded as point clouds
     processFilePLY(filename);
   } else {
-    cerr << "Unrecognized file type for " << filename << endl;
+    std::cerr << "Unrecognized file type for " << filename << std::endl;
   }
 }
 
@@ -558,7 +560,7 @@ int main(int argc, char** argv) {
   args::ArgumentParser parser("A simple demo of Polyscope.\nBy "
                               "Nick Sharp (nsharp@cs.cmu.edu)",
                               "");
-  args::PositionalList<string> files(parser, "files", "One or more files to visualize");
+  args::PositionalList<std::string> files(parser, "files", "One or more files to visualize");
 
   // Parse args
   try {
