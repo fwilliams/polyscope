@@ -1,4 +1,5 @@
 // Copyright 2017-2019, Nicholas Sharp and the Polyscope contributors. http://polyscope.run.
+#include "backends/imgui_impl_opengl3.h"
 #include "polyscope/render/engine.h"
 
 #ifdef POLYSCOPE_BACKEND_OPENGL3_GLFW_ENABLED
@@ -673,7 +674,8 @@ uint32_t GLAttributeBuffer::getNativeBufferID() { return static_cast<uint32_t>(V
 
 
 // create a 1D texture from data
-GLTextureBuffer::GLTextureBuffer(TextureFormat format_, unsigned int size1D, unsigned char* data) : TextureBuffer(1, format_, size1D) {
+GLTextureBuffer::GLTextureBuffer(TextureFormat format_, unsigned int size1D, unsigned char* data)
+    : TextureBuffer(1, format_, size1D) {
 
   glGenTextures(1, &handle);
   glBindTexture(GL_TEXTURE_1D, handle);
@@ -682,7 +684,8 @@ GLTextureBuffer::GLTextureBuffer(TextureFormat format_, unsigned int size1D, uns
 
   setFilterMode(FilterMode::Nearest);
 }
-GLTextureBuffer::GLTextureBuffer(TextureFormat format_, unsigned int size1D, float* data) : TextureBuffer(1, format_, size1D) {
+GLTextureBuffer::GLTextureBuffer(TextureFormat format_, unsigned int size1D, float* data)
+    : TextureBuffer(1, format_, size1D) {
 
   glGenTextures(1, &handle);
   glBindTexture(GL_TEXTURE_1D, handle);
@@ -1684,8 +1687,6 @@ std::shared_ptr<AttributeBuffer> GLShaderProgram::getAttributeBuffer(std::string
 };
 
 
-
-
 void GLShaderProgram::setAttribute(std::string name, const std::vector<glm::vec2>& data) {
 
   // pass-through to the buffer
@@ -2480,7 +2481,8 @@ std::shared_ptr<AttributeBuffer> GLEngine::generateAttributeBuffer(RenderDataTyp
   return std::shared_ptr<AttributeBuffer>(newA);
 }
 
-std::shared_ptr<TextureBuffer> GLEngine::generateTextureBuffer(TextureFormat format, unsigned int size1D, unsigned char* data) {
+std::shared_ptr<TextureBuffer> GLEngine::generateTextureBuffer(TextureFormat format, unsigned int size1D,
+                                                               unsigned char* data) {
   GLTextureBuffer* newT = new GLTextureBuffer(format, size1D, data);
   return std::shared_ptr<TextureBuffer>(newT);
 }
@@ -2489,13 +2491,13 @@ std::shared_ptr<TextureBuffer> GLEngine::generateTextureBuffer(TextureFormat for
   GLTextureBuffer* newT = new GLTextureBuffer(format, size1D, data);
   return std::shared_ptr<TextureBuffer>(newT);
 }
-std::shared_ptr<TextureBuffer> GLEngine::generateTextureBuffer(TextureFormat format, unsigned int sizeX_, unsigned int sizeY_,
-                                                   unsigned char* data) {
+std::shared_ptr<TextureBuffer> GLEngine::generateTextureBuffer(TextureFormat format, unsigned int sizeX_,
+                                                               unsigned int sizeY_, unsigned char* data) {
   GLTextureBuffer* newT = new GLTextureBuffer(format, sizeX_, sizeY_, data);
   return std::shared_ptr<TextureBuffer>(newT);
 }
-std::shared_ptr<TextureBuffer> GLEngine::generateTextureBuffer(TextureFormat format, unsigned int sizeX_, unsigned int sizeY_,
-                                                   float* data) {
+std::shared_ptr<TextureBuffer> GLEngine::generateTextureBuffer(TextureFormat format, unsigned int sizeX_,
+                                                               unsigned int sizeY_, float* data) {
   GLTextureBuffer* newT = new GLTextureBuffer(format, sizeX_, sizeY_, data);
   return std::shared_ptr<TextureBuffer>(newT);
 }
