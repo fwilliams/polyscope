@@ -36,7 +36,7 @@ enum class DrawMode {
 enum class FilterMode { Nearest = 0, Linear };
 enum class TextureFormat { RGB8 = 0, RGBA8, RG16F, RGB16F, RGBA16F, RGBA32F, RGB32F, R32F, R16F, DEPTH24 };
 enum class RenderBufferType { Color, ColorAlpha, Depth, Float4 };
-enum class DepthMode { Less, LEqual, LEqualReadOnly, Greater, Disable };
+enum class DepthMode { Less, LEqual, LEqualReadOnly, Greater, Disable, PassReadOnly };
 enum class BlendMode { Over, AlphaOver, OverNoWrite, Under, Zero, WeightedAdd, Source, Disable };
 enum class RenderDataType {
   Vector2Float,
@@ -223,6 +223,7 @@ public:
 
   // Query pixel
   virtual std::array<float, 4> readFloat4(int xPos, int yPos) = 0;
+  virtual float readDepth(int xPos, int yPos) = 0;
   virtual void blitTo(FrameBuffer* other) = 0;
   virtual std::vector<unsigned char> readBuffer() = 0;
 
@@ -402,6 +403,9 @@ public:
   virtual void clearDisplay();
   virtual void bindDisplay();
   virtual void swapDisplayBuffers() = 0;
+  void pushBindFramebufferForRendering(
+      FrameBuffer& f); // push the existing rendering framebuffer on to a stack and bind to f for rendering
+  void popBindFramebufferForRendering(); // pop the old framebuffer off the stack and bind to it
   virtual std::vector<unsigned char> readDisplayBuffer() = 0;
 
   virtual void clearSceneBuffer();
@@ -443,6 +447,9 @@ public:
   virtual void showWindow() = 0;
   virtual void hideWindow() = 0;
   virtual void updateWindowSize(bool force = false) = 0;
+  virtual void applyWindowSize() = 0; // forces the current window size to match view::windowWidth/Height
+  virtual void setWindowResizable(bool newVal) = 0; // whether the user can manually resize by dragging the window frame
+  virtual bool getWindowResizable() = 0; 
   virtual std::tuple<int, int> getWindowPos() = 0;
   virtual bool windowRequestsClose() = 0;
   virtual void pollEvents() = 0;
@@ -555,6 +562,7 @@ public:
   ImFontAtlas* globalFontAtlas = nullptr;
   ImFont* regularFont = nullptr;
   ImFont* monoFont = nullptr;
+  FrameBuffer* currRenderFramebuffer = nullptr;
 
 protected:
   // TODO Manage a cache of compiled shaders?
@@ -568,6 +576,7 @@ protected:
   TransparencyMode transparencyMode = TransparencyMode::None;
   int slicePlaneCount = 0;
   bool frontFaceCCW = true;
+  std::vector<FrameBuffer*> renderFramebufferStack; // supports push/popBindFramebufferForRendering
 
   // Cached lazy seettings for the resolve and relight program
   int currLightingSampleLevel = -1;

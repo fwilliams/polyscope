@@ -99,6 +99,22 @@ void CurveNetwork::draw() {
   for (auto& x : quantities) {
     x.second->draw();
   }
+  for (auto& x : floatingQuantities) {
+    x.second->draw();
+  }
+}
+
+void CurveNetwork::drawDelayed() {
+  if (!isEnabled()) {
+    return;
+  }
+
+  for (auto& x : quantities) {
+    x.second->drawDelayed();
+  }
+  for (auto& x : floatingQuantities) {
+    x.second->drawDelayed();
+  }
 }
 
 void CurveNetwork::drawPick() {
@@ -391,7 +407,7 @@ std::string CurveNetwork::typeName() { return structureTypeName; }
 // === Quantities
 
 CurveNetworkQuantity::CurveNetworkQuantity(std::string name_, CurveNetwork& curveNetwork_, bool dominates_)
-    : Quantity<CurveNetwork>(name_, curveNetwork_, dominates_) {}
+    : QuantityS<CurveNetwork>(name_, curveNetwork_, dominates_) {}
 
 
 void CurveNetworkQuantity::buildNodeInfoGUI(size_t nodeInd) {}

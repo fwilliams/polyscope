@@ -48,10 +48,8 @@ public:
   virtual void buildCustomOptionsUI() override;
   virtual void buildPickUI(size_t localPickID) override;
 
-  // Render the the structure on screen
   virtual void draw() override;
-
-  // Render for picking
+  virtual void drawDelayed() override;
   virtual void drawPick() override;
 
   virtual void updateObjectSpaceBounds() override;
@@ -194,7 +192,7 @@ CurveNetwork* registerCurveNetworkLoop2D(std::string name, const P& points);
 // Shorthand to get a curve network from polyscope
 inline CurveNetwork* getCurveNetwork(std::string name = "");
 inline bool hasCurveNetwork(std::string name = "");
-inline void removeCurveNetwork(std::string name = "", bool errorIfAbsent = true);
+inline void removeCurveNetwork(std::string name = "", bool errorIfAbsent = false);
 
 
 } // namespace polyscope

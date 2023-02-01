@@ -1,5 +1,6 @@
 // Copyright 2017-2019, Nicholas Sharp and the Polyscope contributors. http://polyscope.run.
 #include "polyscope/render/engine.h"
+
 #ifdef POLYSCOPE_BACKEND_OPENGL3_GLFW_ENABLED
 #include "polyscope/render/opengl/gl_engine.h"
 
@@ -672,7 +673,7 @@ uint32_t GLAttributeBuffer::getNativeBufferID() { return static_cast<uint32_t>(V
 
 
 // create a 1D texture from data
-GLTexture::GLTexture(TextureFormat format_, unsigned int size1D, unsigned char* data) : Texture(1, format_, size1D) {
+GLTextureBuffer::GLTextureBuffer(TextureFormat format_, unsigned int size1D, unsigned char* data) : TextureBuffer(1, format_, size1D) {
 
   glGenTextures(1, &handle);
   glBindTexture(GL_TEXTURE_1D, handle);
@@ -681,7 +682,7 @@ GLTexture::GLTexture(TextureFormat format_, unsigned int size1D, unsigned char* 
 
   setFilterMode(FilterMode::Nearest);
 }
-GLTexture::GLTexture(TextureFormat format_, unsigned int size1D, float* data) : Texture(1, format_, size1D) {
+GLTextureBuffer::GLTextureBuffer(TextureFormat format_, unsigned int size1D, float* data) : TextureBuffer(1, format_, size1D) {
 
   glGenTextures(1, &handle);
   glBindTexture(GL_TEXTURE_1D, handle);
@@ -692,8 +693,8 @@ GLTexture::GLTexture(TextureFormat format_, unsigned int size1D, float* data) : 
 }
 
 // create a 2D texture from data
-GLTexture::GLTexture(TextureFormat format_, unsigned int sizeX_, unsigned int sizeY_, unsigned char* data)
-    : Texture(2, format_, sizeX_, sizeY_) {
+GLTextureBuffer::GLTextureBuffer(TextureFormat format_, unsigned int sizeX_, unsigned int sizeY_, unsigned char* data)
+    : TextureBuffer(2, format_, sizeX_, sizeY_) {
 
   glGenTextures(1, &handle);
   glBindTexture(GL_TEXTURE_2D, handle);
@@ -703,8 +704,8 @@ GLTexture::GLTexture(TextureFormat format_, unsigned int sizeX_, unsigned int si
   setFilterMode(FilterMode::Nearest);
 }
 
-GLTexture::GLTexture(TextureFormat format_, unsigned int sizeX_, unsigned int sizeY_, float* data)
-    : Texture(2, format_, sizeX_, sizeY_) {
+GLTextureBuffer::GLTextureBuffer(TextureFormat format_, unsigned int sizeX_, unsigned int sizeY_, float* data)
+    : TextureBuffer(2, format_, sizeX_, sizeY_) {
 
   glGenTextures(1, &handle);
   glBindTexture(GL_TEXTURE_2D, handle);
@@ -714,11 +715,11 @@ GLTexture::GLTexture(TextureFormat format_, unsigned int sizeX_, unsigned int si
   setFilterMode(FilterMode::Nearest);
 }
 
-GLTexture::~GLTexture() { glDeleteTextures(1, &handle); }
+GLTextureBuffer::~GLTextureBuffer() { glDeleteTextures(1, &handle); }
 
-void GLTexture::resize(unsigned int newLen) {
+void GLTextureBuffer::resize(unsigned int newLen) {
 
-  Texture::resize(newLen);
+  TextureBuffer::resize(newLen);
 
   bind();
   if (dim == 1) {
@@ -730,9 +731,9 @@ void GLTexture::resize(unsigned int newLen) {
   checkGLError();
 }
 
-void GLTexture::resize(unsigned int newX, unsigned int newY) {
+void GLTextureBuffer::resize(unsigned int newX, unsigned int newY) {
 
-  Texture::resize(newX, newY);
+  TextureBuffer::resize(newX, newY);
 
   bind();
   if (dim == 1) {
@@ -744,7 +745,7 @@ void GLTexture::resize(unsigned int newX, unsigned int newY) {
   checkGLError();
 }
 
-void GLTexture::setFilterMode(FilterMode newMode) {
+void GLTextureBuffer::setFilterMode(FilterMode newMode) {
 
   bind();
 
@@ -766,9 +767,9 @@ void GLTexture::setFilterMode(FilterMode newMode) {
   checkGLError();
 }
 
-void* GLTexture::getNativeHandle() { return reinterpret_cast<void*>(getHandle()); }
+void* GLTextureBuffer::getNativeHandle() { return reinterpret_cast<void*>(getHandle()); }
 
-std::vector<float> GLTexture::getDataScalar() {
+std::vector<float> GLTextureBuffer::getDataScalar() {
   if (dimension(format) != 1)
     throw std::runtime_error("called getDataScalar on texture which does not have a 1 dimensional format");
 
@@ -782,7 +783,7 @@ std::vector<float> GLTexture::getDataScalar() {
   return outData;
 }
 
-std::vector<glm::vec2> GLTexture::getDataVector2() {
+std::vector<glm::vec2> GLTextureBuffer::getDataVector2() {
   if (dimension(format) != 2)
     throw std::runtime_error("called getDataVector2 on texture which does not have a 2 dimensional format");
 
@@ -796,7 +797,7 @@ std::vector<glm::vec2> GLTexture::getDataVector2() {
   return outData;
 }
 
-std::vector<glm::vec3> GLTexture::getDataVector3() {
+std::vector<glm::vec3> GLTextureBuffer::getDataVector3() {
   if (dimension(format) != 3)
     throw std::runtime_error("called getDataVector3 on texture which does not have a 3 dimensional format");
   throw std::runtime_error("not implemented");
@@ -811,7 +812,7 @@ std::vector<glm::vec3> GLTexture::getDataVector3() {
   return outData;
 }
 
-GLenum GLTexture::textureType() {
+GLenum GLTextureBuffer::textureType() {
   if (dim == 1) {
     return GL_TEXTURE_1D;
   } else if (dim == 2) {
@@ -820,7 +821,7 @@ GLenum GLTexture::textureType() {
   throw std::runtime_error("bad texture type");
 }
 
-void GLTexture::bind() {
+void GLTextureBuffer::bind() {
   glBindTexture(textureType(), handle);
   checkGLError();
 }
@@ -912,10 +913,10 @@ void GLFrameBuffer::addDepthBuffer(std::shared_ptr<RenderBuffer> renderBufferIn)
   renderBuffersDepth.push_back(renderBuffer);
 }
 
-void GLFrameBuffer::addColorBuffer(std::shared_ptr<Texture> textureBufferIn) {
+void GLFrameBuffer::addColorBuffer(std::shared_ptr<TextureBuffer> textureBufferIn) {
 
   // it _better_ be a GL buffer
-  std::shared_ptr<GLTexture> textureBuffer = std::dynamic_pointer_cast<GLTexture>(textureBufferIn);
+  std::shared_ptr<GLTextureBuffer> textureBuffer = std::dynamic_pointer_cast<GLTextureBuffer>(textureBufferIn);
   if (!textureBuffer) throw std::runtime_error("tried to bind to non-GL texture buffer");
 
   textureBuffer->bind();
@@ -929,10 +930,10 @@ void GLFrameBuffer::addColorBuffer(std::shared_ptr<Texture> textureBufferIn) {
   nColorBuffers++;
 }
 
-void GLFrameBuffer::addDepthBuffer(std::shared_ptr<Texture> textureBufferIn) {
+void GLFrameBuffer::addDepthBuffer(std::shared_ptr<TextureBuffer> textureBufferIn) {
 
   // it _better_ be a GL buffer
-  std::shared_ptr<GLTexture> textureBuffer = std::dynamic_pointer_cast<GLTexture>(textureBufferIn);
+  std::shared_ptr<GLTextureBuffer> textureBuffer = std::dynamic_pointer_cast<GLTextureBuffer>(textureBufferIn);
   if (!textureBuffer) throw std::runtime_error("tried to bind to non-GL texture buffer");
 
   textureBuffer->bind();
@@ -976,6 +977,8 @@ bool GLFrameBuffer::bindForRendering() {
     return false;
   }
 
+  render::engine->currRenderFramebuffer = this;
+
   // Set the viewport
   if (!viewportSet) {
     throw std::runtime_error(
@@ -1013,7 +1016,6 @@ std::array<float, 4> GLFrameBuffer::readFloat4(int xPos, int yPos) {
 
   glFlush();
   glFinish();
-
   bind();
 
   // Read from the buffer
@@ -1023,6 +1025,20 @@ std::array<float, 4> GLFrameBuffer::readFloat4(int xPos, int yPos) {
   return result;
 }
 
+float GLFrameBuffer::readDepth(int xPos, int yPos) {
+
+  // TODO does no error checking for the case where no depth buffer is attached
+
+  glFlush();
+  glFinish();
+  bind();
+
+  // Read from the buffer
+  float result;
+  glReadPixels(xPos, yPos, 1, 1, GL_DEPTH_COMPONENT, GL_FLOAT, &result);
+
+  return result;
+}
 
 std::vector<unsigned char> GLFrameBuffer::readBuffer() {
 
@@ -1146,6 +1162,12 @@ void GLShaderProgram::addUniqueTexture(ShaderSpecTexture newTexture) {
   textures.push_back(GLShaderTexture{newTexture.name, newTexture.dim, 777, false, nullptr, nullptr, 777});
 }
 
+
+void GLShaderProgram::deleteAttributeBuffer(GLShaderAttribute& attribute) {
+  glUseProgram(programHandle);
+  glBindVertexArray(vaoHandle);
+  glDeleteBuffers(1, &attribute.VBOLoc);
+}
 
 void GLShaderProgram::compileGLProgram(const std::vector<ShaderStageSpecification>& stages) {
 
@@ -1667,6 +1689,9 @@ std::shared_ptr<AttributeBuffer> GLShaderProgram::getAttributeBuffer(std::string
   return nullptr;
 };
 
+
+
+
 void GLShaderProgram::setAttribute(std::string name, const std::vector<glm::vec2>& data) {
 
   // pass-through to the buffer
@@ -1810,7 +1835,7 @@ void GLShaderProgram::setTexture1D(std::string name, unsigned char* texData, uns
     }
 
     // Create a new texture object
-    t.textureBufferOwned.reset(new GLTexture(TextureFormat::RGB8, length, texData));
+    t.textureBufferOwned.reset(new GLTextureBuffer(TextureFormat::RGB8, length, texData));
     t.textureBuffer = t.textureBufferOwned.get();
 
 
@@ -1843,9 +1868,9 @@ void GLShaderProgram::setTexture2D(std::string name, unsigned char* texData, uns
     }
 
     if (withAlpha) {
-      t.textureBufferOwned.reset(new GLTexture(TextureFormat::RGBA8, width, height, texData));
+      t.textureBufferOwned.reset(new GLTextureBuffer(TextureFormat::RGBA8, width, height, texData));
     } else {
-      t.textureBufferOwned.reset(new GLTexture(TextureFormat::RGB8, width, height, texData));
+      t.textureBufferOwned.reset(new GLTextureBuffer(TextureFormat::RGB8, width, height, texData));
     }
     t.textureBuffer = t.textureBufferOwned.get();
 
@@ -1875,7 +1900,7 @@ void GLShaderProgram::setTexture2D(std::string name, unsigned char* texData, uns
   throw std::invalid_argument("No texture with name " + name);
 }
 
-void GLShaderProgram::setTextureFromBuffer(std::string name, Texture* textureBuffer) {
+void GLShaderProgram::setTextureFromBuffer(std::string name, TextureBuffer* textureBuffer) {
   glUseProgram(programHandle);
 
   // Find the right texture
@@ -1886,7 +1911,7 @@ void GLShaderProgram::setTextureFromBuffer(std::string name, Texture* textureBuf
       throw std::invalid_argument("Tried to use texture with mismatched dimension " + std::to_string(t.dim));
     }
 
-    t.textureBuffer = dynamic_cast<GLTexture*>(textureBuffer);
+    t.textureBuffer = dynamic_cast<GLTextureBuffer*>(textureBuffer);
     if (!t.textureBuffer) {
       throw std::invalid_argument("Bad texture in setTextureFromBuffer()");
     }
@@ -1925,8 +1950,8 @@ void GLShaderProgram::setTextureFromColormap(std::string name, const std::string
     }
 
     // glTexImage1D(GL_TEXTURE_1D, 0, GL_RGB, colormap.values.size(), 0, GL_RGB, GL_FLOAT, &(colorBuffer[0]));
-    t.textureBufferOwned = std::dynamic_pointer_cast<GLTexture>(
-        engine->generateTexture(TextureFormat::RGB32F, colormap.values.size(), &(colorBuffer[0])));
+    t.textureBufferOwned = std::dynamic_pointer_cast<GLTextureBuffer>(
+        engine->generateTextureBuffer(TextureFormat::RGB32F, colormap.values.size(), &(colorBuffer[0])));
     t.textureBufferOwned->setFilterMode(FilterMode::Linear);
     t.textureBuffer = t.textureBufferOwned.get();
 
@@ -1950,9 +1975,9 @@ void GLShaderProgram::setIndex(std::vector<std::array<unsigned int, 3>>& indices
   // not be overly clever and just reshape it.
   unsigned int* rawData = new unsigned int[3 * indices.size()];
   for (unsigned int i = 0; i < indices.size(); i++) {
-    rawData[3 * i + 0] = indices[i][0];
-    rawData[3 * i + 1] = indices[i][1];
-    rawData[3 * i + 2] = indices[i][2];
+    rawData[3 * i + 0] = static_cast<unsigned int>(indices[i][0]);
+    rawData[3 * i + 1] = static_cast<unsigned int>(indices[i][1]);
+    rawData[3 * i + 2] = static_cast<unsigned int>(indices[i][2]);
   }
 
   glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, indexVBO);
@@ -2272,7 +2297,6 @@ void GLEngine::updateWindowSize(bool force) {
 
     // prevent any division by zero for e.g. aspect ratio calcs
     if (newBufferHeight == 0) newBufferHeight = 1;
-
     if (newWindowHeight == 0) newWindowHeight = 1;
 
     view::bufferWidth = newBufferWidth;
@@ -2284,6 +2308,19 @@ void GLEngine::updateWindowSize(bool force) {
     render::engine->setScreenBufferViewports();
   }
 }
+
+
+void GLEngine::applyWindowSize() {
+  glfwSetWindowSize(mainWindow, view::windowWidth, view::windowHeight);
+  updateWindowSize(true);
+}
+
+
+void GLEngine::setWindowResizable(bool newVal) {
+  glfwSetWindowAttrib(mainWindow, GLFW_RESIZABLE, newVal ? GLFW_TRUE : GLFW_FALSE);
+}
+
+bool GLEngine::getWindowResizable() { return glfwGetWindowAttrib(mainWindow, GLFW_RESIZABLE); }
 
 std::tuple<int, int> GLEngine::getWindowPos() {
   int x, y;
@@ -2336,6 +2373,11 @@ void GLEngine::setDepthMode(DepthMode newMode) {
   case DepthMode::LEqualReadOnly:
     glEnable(GL_DEPTH_TEST);
     glDepthFunc(GL_LEQUAL);
+    glDepthMask(GL_FALSE);
+    break;
+  case DepthMode::PassReadOnly:
+    glEnable(GL_DEPTH_TEST);
+    glDepthFunc(GL_ALWAYS);
     glDepthMask(GL_FALSE);
     break;
   case DepthMode::Greater:
@@ -2444,24 +2486,24 @@ std::shared_ptr<AttributeBuffer> GLEngine::generateAttributeBuffer(RenderDataTyp
   return std::shared_ptr<AttributeBuffer>(newA);
 }
 
-std::shared_ptr<Texture> GLEngine::generateTexture(TextureFormat format, unsigned int size1D, unsigned char* data) {
-  GLTexture* newT = new GLTexture(format, size1D, data);
-  return std::shared_ptr<Texture>(newT);
+std::shared_ptr<TextureBuffer> GLEngine::generateTextureBuffer(TextureFormat format, unsigned int size1D, unsigned char* data) {
+  GLTextureBuffer* newT = new GLTextureBuffer(format, size1D, data);
+  return std::shared_ptr<TextureBuffer>(newT);
 }
 
-std::shared_ptr<Texture> GLEngine::generateTexture(TextureFormat format, unsigned int size1D, float* data) {
-  GLTexture* newT = new GLTexture(format, size1D, data);
-  return std::shared_ptr<Texture>(newT);
+std::shared_ptr<TextureBuffer> GLEngine::generateTextureBuffer(TextureFormat format, unsigned int size1D, float* data) {
+  GLTextureBuffer* newT = new GLTextureBuffer(format, size1D, data);
+  return std::shared_ptr<TextureBuffer>(newT);
 }
-std::shared_ptr<Texture> GLEngine::generateTexture(TextureFormat format, unsigned int sizeX_, unsigned int sizeY_,
+std::shared_ptr<TextureBuffer> GLEngine::generateTextureBuffer(TextureFormat format, unsigned int sizeX_, unsigned int sizeY_,
                                                    unsigned char* data) {
-  GLTexture* newT = new GLTexture(format, sizeX_, sizeY_, data);
-  return std::shared_ptr<Texture>(newT);
+  GLTextureBuffer* newT = new GLTextureBuffer(format, sizeX_, sizeY_, data);
+  return std::shared_ptr<TextureBuffer>(newT);
 }
-std::shared_ptr<Texture> GLEngine::generateTexture(TextureFormat format, unsigned int sizeX_, unsigned int sizeY_,
+std::shared_ptr<TextureBuffer> GLEngine::generateTextureBuffer(TextureFormat format, unsigned int sizeX_, unsigned int sizeY_,
                                                    float* data) {
-  GLTexture* newT = new GLTexture(format, sizeX_, sizeY_, data);
-  return std::shared_ptr<Texture>(newT);
+  GLTextureBuffer* newT = new GLTextureBuffer(format, sizeX_, sizeY_, data);
+  return std::shared_ptr<TextureBuffer>(newT);
 }
 
 std::shared_ptr<RenderBuffer> GLEngine::generateRenderBuffer(RenderBufferType type, unsigned int sizeX_,
@@ -2541,6 +2583,7 @@ void GLEngine::populateDefaultShadersAndRules() {
   // == Load general base shaders
   registeredShaderPrograms.insert({"MESH", {{FLEX_MESH_VERT_SHADER, FLEX_MESH_FRAG_SHADER}, DrawMode::Triangles}});
   registeredShaderPrograms.insert({"SLICE_TETS", {{SLICE_TETS_VERT_SHADER, SLICE_TETS_GEOM_SHADER, SLICE_TETS_FRAG_SHADER}, DrawMode::Points}});
+  registeredShaderPrograms.insert({"INDEXED_MESH", {{FLEX_MESH_VERT_SHADER, FLEX_MESH_FRAG_SHADER}, DrawMode::IndexedTriangles}});
   registeredShaderPrograms.insert({"RAYCAST_SPHERE", {{FLEX_SPHERE_VERT_SHADER, FLEX_SPHERE_GEOM_SHADER, FLEX_SPHERE_FRAG_SHADER}, DrawMode::Points}});
   registeredShaderPrograms.insert({"POINT_QUAD", {{FLEX_POINTQUAD_VERT_SHADER, FLEX_POINTQUAD_GEOM_SHADER, FLEX_POINTQUAD_FRAG_SHADER}, DrawMode::Points}});
   registeredShaderPrograms.insert({"RAYCAST_VECTOR", {{FLEX_VECTOR_VERT_SHADER, FLEX_VECTOR_GEOM_SHADER, FLEX_VECTOR_FRAG_SHADER}, DrawMode::Points}});
@@ -2558,6 +2601,7 @@ void GLEngine::populateDefaultShadersAndRules() {
   registeredShaderPrograms.insert({"TEXTURE_DRAW_DOT3", {{TEXTURE_DRAW_VERT_SHADER, DOT3_TEXTURE_DRAW_FRAG_SHADER}, DrawMode::Triangles}});
   registeredShaderPrograms.insert({"TEXTURE_DRAW_MAP3", {{TEXTURE_DRAW_VERT_SHADER, MAP3_TEXTURE_DRAW_FRAG_SHADER}, DrawMode::Triangles}});
   registeredShaderPrograms.insert({"TEXTURE_DRAW_SPHEREBG", {{SPHEREBG_DRAW_VERT_SHADER, SPHEREBG_DRAW_FRAG_SHADER}, DrawMode::Triangles}});
+  registeredShaderPrograms.insert({"TEXTURE_DRAW_RENDERIMAGE_PLAIN", {{TEXTURE_DRAW_VERT_SHADER, PLAIN_RENDERIMAGE_TEXTURE_DRAW_FRAG_SHADER}, DrawMode::Triangles}});
   registeredShaderPrograms.insert({"COMPOSITE_PEEL", {{TEXTURE_DRAW_VERT_SHADER, COMPOSITE_PEEL}, DrawMode::Triangles}});
   registeredShaderPrograms.insert({"DEPTH_COPY", {{TEXTURE_DRAW_VERT_SHADER, DEPTH_COPY}, DrawMode::Triangles}});
   registeredShaderPrograms.insert({"DEPTH_TO_MASK", {{TEXTURE_DRAW_VERT_SHADER, DEPTH_TO_MASK}, DrawMode::Triangles}});
@@ -2596,9 +2640,16 @@ void GLEngine::populateDefaultShadersAndRules() {
   registeredShaderRules.insert({"SHADEVALUE_MAG_VALUE2", SHADEVALUE_MAG_VALUE2});
   registeredShaderRules.insert({"ISOLINE_STRIPE_VALUECOLOR", ISOLINE_STRIPE_VALUECOLOR});
   registeredShaderRules.insert({"CHECKER_VALUE2COLOR", CHECKER_VALUE2COLOR});
+ 
+  // Texture and image things
+  registeredShaderRules.insert({"TEXTURE_ORIGIN_UPPERLEFT", TEXTURE_ORIGIN_UPPERLEFT});
+  registeredShaderRules.insert({"TEXTURE_SET_TRANSPARENCY", TEXTURE_SET_TRANSPARENCY});
+  registeredShaderRules.insert({"TEXTURE_SHADE_COLOR", TEXTURE_SHADE_COLOR});
+  registeredShaderRules.insert({"TEXTURE_PROPAGATE_VALUE", TEXTURE_PROPAGATE_VALUE});
 
   // mesh things
   registeredShaderRules.insert({"MESH_WIREFRAME", MESH_WIREFRAME});
+  registeredShaderRules.insert({"MESH_WIREFRAME_ONLY", MESH_WIREFRAME_ONLY});
   registeredShaderRules.insert({"MESH_BACKFACE_NORMAL_FLIP", MESH_BACKFACE_NORMAL_FLIP});
   registeredShaderRules.insert({"MESH_BACKFACE_DIFFERENT", MESH_BACKFACE_DIFFERENT});
   registeredShaderRules.insert({"MESH_BACKFACE_DARKEN", MESH_BACKFACE_DARKEN});

@@ -183,6 +183,7 @@ public:
   // Query pixels
   std::vector<unsigned char> readBuffer() override;
   std::array<float, 4> readFloat4(int xPos, int yPos) override;
+  float readDepth(int xPos, int yPos) override;
   void blitTo(FrameBuffer* other) override;
 
   // Getters
@@ -340,6 +341,9 @@ public:
   void showWindow() override;
   void hideWindow() override;
   void updateWindowSize(bool force = false) override;
+  void applyWindowSize() override;
+  void setWindowResizable(bool newVal) override;
+  bool getWindowResizable() override;
   std::tuple<int, int> getWindowPos() override;
   bool windowRequestsClose() override;
   void pollEvents() override;

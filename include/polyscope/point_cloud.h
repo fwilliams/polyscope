@@ -52,6 +52,7 @@ public:
 
   // Standard structure overrides
   virtual void draw() override;
+  virtual void drawDelayed() override;
   virtual void drawPick() override;
   virtual void updateObjectSpaceBounds() override;
   virtual std::string typeName() override;
@@ -188,7 +189,7 @@ PointCloud* registerPointCloud2D(std::string name, const T& points);
 // Shorthand to get a point cloud from polyscope
 inline PointCloud* getPointCloud(std::string name = "");
 inline bool hasPointCloud(std::string name = "");
-inline void removePointCloud(std::string name = "", bool errorIfAbsent = true);
+inline void removePointCloud(std::string name = "", bool errorIfAbsent = false);
 
 
 } // namespace polyscope

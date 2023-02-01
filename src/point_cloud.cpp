@@ -91,6 +91,22 @@ void PointCloud::draw() {
   for (auto& x : quantities) {
     x.second->draw();
   }
+  for (auto& x : floatingQuantities) {
+    x.second->draw();
+  }
+}
+
+void PointCloud::drawDelayed() {
+  if (!isEnabled()) {
+    return;
+  }
+
+  for (auto& x : quantities) {
+    x.second->drawDelayed();
+  }
+  for (auto& x : floatingQuantities) {
+    x.second->drawDelayed();
+  }
 }
 
 void PointCloud::drawPick() {
@@ -241,8 +257,7 @@ void PointCloud::buildCustomUI() {
   }
   ImGui::SameLine();
   ImGui::PushItemWidth(70);
-  if (ImGui::SliderFloat("Radius", pointRadius.get().getValuePtr(), 0.0, .1, "%.5f",
-                         ImGuiSliderFlags_Logarithmic | ImGuiSliderFlags_NoRoundToFormat)) {
+  if (ImGui::SliderFloat("Radius", pointRadius.get().getValuePtr(), 0.0, .1, "%.5f", 3.)) {
     pointRadius.manuallyChanged();
     requestRedraw();
   }
@@ -348,7 +363,7 @@ void PointCloud::clearPointRadiusQuantity() {
 
 // Quantity default methods
 PointCloudQuantity::PointCloudQuantity(std::string name_, PointCloud& pointCloud_, bool dominates_)
-    : Quantity<PointCloud>(name_, pointCloud_, dominates_) {}
+    : QuantityS<PointCloud>(name_, pointCloud_, dominates_) {}
 
 
 void PointCloudQuantity::buildInfoGUI(size_t pointInd) {}

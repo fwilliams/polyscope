@@ -50,10 +50,8 @@ public:
   virtual void buildCustomOptionsUI() override;
   virtual void buildPickUI(size_t localPickID) override;
 
-  // Render the the structure on screen
   virtual void draw() override;
-
-  // Render for picking
+  virtual void drawDelayed() override;
   virtual void drawPick() override;
 
   virtual void updateObjectSpaceBounds() override;
@@ -257,7 +255,7 @@ VolumeMesh* registerTetHexMesh(std::string name, const V& vertexPositions, const
 // Shorthand to get a mesh from polyscope
 inline VolumeMesh* getVolumeMesh(std::string name = "");
 inline bool hasVolumeMesh(std::string name = "");
-inline void removeVolumeMesh(std::string name = "", bool errorIfAbsent = true);
+inline void removeVolumeMesh(std::string name = "", bool errorIfAbsent = false);
 
 
 } // namespace polyscope

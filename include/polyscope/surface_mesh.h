@@ -81,8 +81,7 @@ public:
 
   // Render the the structure on screen
   virtual void draw() override;
-
-  // Render for picking
+  virtual void drawDelayed() override;
   virtual void drawPick() override;
   virtual void updateObjectSpaceBounds() override;
   virtual std::string typeName() override;
@@ -488,7 +487,7 @@ SurfaceMesh* registerSurfaceMesh(std::string name, const V& vertexPositions, con
 // Shorthand to get a mesh from polyscope
 inline SurfaceMesh* getSurfaceMesh(std::string name = "");
 inline bool hasSurfaceMesh(std::string name = "");
-inline void removeSurfaceMesh(std::string name = "", bool errorIfAbsent = true);
+inline void removeSurfaceMesh(std::string name = "", bool errorIfAbsent = false);
 
 
 } // namespace polyscope

@@ -1,4 +1,5 @@
 // Copyright 2017-2019, Nicholas Sharp and the Polyscope contributors. http://polyscope.run.
+
 #include "polyscope/render/engine.h"
 
 #include "polyscope/polyscope.h"
@@ -92,23 +93,23 @@ AttributeBuffer::AttributeBuffer(RenderDataType dataType_, int arrayCount_)
 
 AttributeBuffer::~AttributeBuffer() {}
 
-Texture::Texture(int dim_, TextureFormat format_, unsigned int sizeX_, unsigned int sizeY_)
+TextureBuffer::TextureBuffer(int dim_, TextureFormat format_, unsigned int sizeX_, unsigned int sizeY_)
     : dim(dim_), format(format_), sizeX(sizeX_), sizeY(sizeY_), uniqueID(render::engine->getNextUniqueID()) {
   if (sizeX > (1 << 22)) throw std::runtime_error("OpenGL error: invalid texture dimensions");
   if (dim > 1 && sizeY > (1 << 22)) throw std::runtime_error("OpenGL error: invalid texture dimensions");
 }
 
-Texture::~Texture() {}
+TextureBuffer::~TextureBuffer() {}
 
-void Texture::setFilterMode(FilterMode newMode) {}
+void TextureBuffer::setFilterMode(FilterMode newMode) {}
 
-void Texture::resize(unsigned int newLen) { sizeX = newLen; }
-void Texture::resize(unsigned int newX, unsigned int newY) {
+void TextureBuffer::resize(unsigned int newLen) { sizeX = newLen; }
+void TextureBuffer::resize(unsigned int newX, unsigned int newY) {
   sizeX = newX;
   sizeY = newY;
 }
 
-unsigned int Texture::getTotalSize() const {
+unsigned int TextureBuffer::getTotalSize() const {
   switch (dim) {
   case 1:
     return getSizeX();
@@ -149,10 +150,10 @@ void FrameBuffer::resize(unsigned int newXSize, unsigned int newYSize) {
   for (auto& b : renderBuffersDepth) {
     b->resize(newXSize, newYSize);
   }
-  for (auto& b : texturesColor) {
+  for (auto& b : textureBuffersColor) {
     b->resize(newXSize, newYSize);
   }
-  for (auto& b : texturesDepth) {
+  for (auto& b : textureBuffersDepth) {
     b->resize(newXSize, newYSize);
   }
   sizeX = newXSize;
@@ -258,13 +259,9 @@ void Engine::buildEngineGui() {
 
     ImGui::SetNextTreeNodeOpen(false, ImGuiCond_FirstUseEver);
     if (ImGui::TreeNode("Tone Mapping")) {
-      ImGui::SliderFloat("exposure", &exposure, 0.1, 2.0, "%.3f",
-                         ImGuiSliderFlags_Logarithmic | ImGuiSliderFlags_NoRoundToFormat);
-      ImGui::SliderFloat("white level", &whiteLevel, 0.0, 2.0, "%.3f",
-                         ImGuiSliderFlags_Logarithmic | ImGuiSliderFlags_NoRoundToFormat);
-      ImGui::SliderFloat("gamma", &gamma, 0.5, 3.0, "%.3f",
-                         ImGuiSliderFlags_Logarithmic | ImGuiSliderFlags_NoRoundToFormat);
-
+      ImGui::SliderFloat("exposure", &exposure, 0.1, 2.0, "%.3f", 2.);
+      ImGui::SliderFloat("white level", &whiteLevel, 0.0, 2.0, "%.3f", 2.);
+      ImGui::SliderFloat("gamma", &gamma, 0.5, 3.0, "%.3f", 2.);
       ImGui::TreePop();
     }
 
@@ -565,9 +562,9 @@ void Engine::allocateGlobalBuffersAndPrograms() {
   { // Scene buffer
 
     // Note that this is basically duplicated in ground_plane.cpp, changes here should probably be reflected there
-    sceneColor = generateTexture(TextureFormat::RGBA16F, view::bufferWidth, view::bufferHeight);
+    sceneColor = generateTextureBuffer(TextureFormat::RGBA16F, view::bufferWidth, view::bufferHeight);
     // sceneDepth = generateRenderBuffer(RenderBufferType::Depth, view::bufferWidth, view::bufferHeight);
-    sceneDepth = generateTexture(TextureFormat::DEPTH24, view::bufferWidth, view::bufferHeight);
+    sceneDepth = generateTextureBuffer(TextureFormat::DEPTH24, view::bufferWidth, view::bufferHeight);
 
     sceneBuffer = generateFrameBuffer(view::bufferWidth, view::bufferHeight);
     sceneBuffer->addColorBuffer(sceneColor);
@@ -579,7 +576,7 @@ void Engine::allocateGlobalBuffersAndPrograms() {
   }
 
   { // Alternate depth texture used for some effects
-    sceneDepthMin = generateTexture(TextureFormat::DEPTH24, view::bufferWidth, view::bufferHeight);
+    sceneDepthMin = generateTextureBuffer(TextureFormat::DEPTH24, view::bufferWidth, view::bufferHeight);
 
     sceneDepthMinFrame = generateFrameBuffer(view::bufferWidth, view::bufferHeight);
     sceneDepthMinFrame->addDepthBuffer(sceneDepthMin);
@@ -587,7 +584,7 @@ void Engine::allocateGlobalBuffersAndPrograms() {
   }
 
   { // "Final" scene buffer (after resolving)
-    sceneColorFinal = generateTexture(TextureFormat::RGBA16F, view::bufferWidth, view::bufferHeight);
+    sceneColorFinal = generateTextureBuffer(TextureFormat::RGBA16F, view::bufferWidth, view::bufferHeight);
 
     sceneBufferFinal = generateFrameBuffer(view::bufferWidth, view::bufferHeight);
     sceneBufferFinal->addColorBuffer(sceneColorFinal);
@@ -659,6 +656,20 @@ uint64_t Engine::getNextUniqueID() {
   uint64_t thisID = uniqueID;
   uniqueID++;
   return thisID;
+}
+
+void Engine::pushBindFramebufferForRendering(FrameBuffer& f) {
+  if (currRenderFramebuffer == nullptr)
+    throw std::runtime_error("tried to push current framebuff on to stack, but it is null");
+  renderFramebufferStack.push_back(currRenderFramebuffer);
+  f.bindForRendering();
+}
+
+void Engine::popBindFramebufferForRendering() {
+  if (renderFramebufferStack.empty())
+    throw std::runtime_error("called popBindFramebufferForRendering() on empty stack. Forgot to push?");
+  renderFramebufferStack.back()->bindForRendering();
+  renderFramebufferStack.pop_back();
 }
 
 void Engine::addSlicePlane(std::string uniquePostfix) {
@@ -898,8 +909,8 @@ void Engine::loadBlendableMaterial(std::string matName, std::string filenameBase
   loadBlendableMaterial(matName, names);
 }
 
-std::shared_ptr<Texture> Engine::loadMaterialTexture(float* data, int width, int height) {
-  std::shared_ptr<Texture> t = engine->generateTexture(TextureFormat::RGB16F, width, height, data);
+std::shared_ptr<TextureBuffer> Engine::loadMaterialTexture(float* data, int width, int height) {
+  std::shared_ptr<TextureBuffer> t = engine->generateTexture(TextureFormat::RGB16F, width, height, data);
   t->setFilterMode(FilterMode::Linear);
   return t;
 }
@@ -1031,7 +1042,7 @@ void Engine::loadDefaultColorMaps() {
 }
 
 
-void Engine::showTextureInImGuiWindow(std::string windowName, Texture* buffer) {
+void Engine::showTextureInImGuiWindow(std::string windowName, TextureBuffer* buffer) {
   ImGui::Begin(windowName.c_str());
 
   if (buffer->getDimension() != 2) error("only know how to show 2D textures");

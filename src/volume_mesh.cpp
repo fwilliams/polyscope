@@ -419,6 +419,23 @@ void VolumeMesh::draw() {
   for (auto& x : quantities) {
     x.second->draw();
   }
+  for (auto& x : floatingQuantities) {
+    x.second->draw();
+  }
+}
+
+void VolumeMesh::drawDelayed() {
+  if (!isEnabled()) {
+    return;
+  }
+
+  // Draw the quantities
+  for (auto& x : quantities) {
+    x.second->drawDelayed();
+  }
+  for (auto& x : floatingQuantities) {
+    x.second->drawDelayed();
+  }
 }
 
 void VolumeMesh::drawPick() {
@@ -1065,7 +1082,7 @@ VolumeMesh::addCellVectorQuantityImpl(std::string name, const std::vector<glm::v
 
 
 VolumeMeshQuantity::VolumeMeshQuantity(std::string name, VolumeMesh& parentStructure, bool dominates)
-    : Quantity<VolumeMesh>(name, parentStructure, dominates) {}
+    : QuantityS<VolumeMesh>(name, parentStructure, dominates) {}
 void VolumeMeshQuantity::buildVertexInfoGUI(size_t vInd) {}
 void VolumeMeshQuantity::buildFaceInfoGUI(size_t fInd) {}
 void VolumeMeshQuantity::buildEdgeInfoGUI(size_t eInd) {}

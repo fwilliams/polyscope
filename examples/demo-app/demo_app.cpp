@@ -3,8 +3,12 @@
 #include "polyscope/combining_hash_functions.h"
 #include "polyscope/messages.h"
 
+#include "polyscope/camera_view.h"
 #include "polyscope/curve_network.h"
 #include "polyscope/file_helpers.h"
+#include "polyscope/floating_quantity_structure.h"
+#include "polyscope/implicit_surface.h"
+#include "polyscope/pick.h"
 #include "polyscope/point_cloud.h"
 #include "polyscope/surface_mesh.h"
 #include "polyscope/surface_mesh_io.h"
@@ -19,6 +23,9 @@
 #include "json/json.hpp"
 
 #include "simple_dot_mesh_parser.h"
+#include "stb_image.h"
+
+
 
 bool endsWith(const std::string& str, const std::string& suffix) {
   return str.size() >= suffix.size() && str.compare(str.size() - suffix.size(), suffix.size(), suffix) == 0;
@@ -85,7 +92,6 @@ void processFileOBJ(std::string filename) {
     vertexPositionsGLM.push_back(glm::vec3{p[0], p[1], p[2]});
   }
   auto psMesh = polyscope::registerSurfaceMesh(niceName, vertexPositionsGLM, faceIndices);
-  return; // FIXME
 
   // Useful data
   size_t nVertices = psMesh->nVertices();
@@ -428,6 +434,124 @@ polyscope::warning("Some problems come in groups", "detail = " + std::to_string(
   */
 }
 
+
+void loadFloatingImageData(polyscope::PointCloud* targetCloud = nullptr) {
+
+  // load an image from disk as example data
+  std::string imagePath = "test_image.png";
+
+  int width, height, nComp;
+  unsigned char* data = stbi_load(imagePath.c_str(), &width, &height, &nComp, 4);
+  if (!data) {
+    polyscope::warning("failed to load image from " + imagePath);
+    return;
+  }
+  bool hasAlpha = (nComp == 4);
+
+  // Parse the data in to a float array
+  std::vector<std::array<float, 3>> imageColor(width * height);
+  std::vector<std::array<float, 4>> imageColorAlpha(width * height);
+  std::vector<float> imageScalar(width * height);
+  for (int j = 0; j < height; j++) {
+    for (int i = 0; i < width; i++) {
+      int pixInd = (j * width + i) * nComp;
+      unsigned char pR = data[pixInd + 0];
+      unsigned char pG = data[pixInd + 1];
+      unsigned char pB = data[pixInd + 2];
+      unsigned char pA = 255;
+      if (nComp == 4) pA = data[pixInd + 3];
+
+      // color
+      std::array<float, 3> val{pR / 255.f, pG / 255.f, pB / 255.f};
+      imageColor[j * width + i] = val;
+
+      // scalar
+      imageScalar[j * width + i] = (val[0] + val[1] + val[2]) / 3.;
+
+      // color alpha
+      std::array<float, 4> valA{pR / 255.f, pG / 255.f, pB / 255.f, pA / 255.f};
+      imageColorAlpha[j * width + i] = valA;
+    }
+  }
+
+  if (targetCloud == nullptr) {
+    polyscope::addColorImageQuantity("test color image", width, height, imageColor);
+    polyscope::addScalarImageQuantity("test scalar image", width, height, imageScalar);
+
+    if (hasAlpha) {
+      polyscope::addColorAlphaImageQuantity("test color alpha image", width, height, imageColorAlpha);
+    }
+  } else {
+    targetCloud->addColorImageQuantity("test color image", width, height, imageColor);
+    targetCloud->addScalarImageQuantity("test scalar image", width, height, imageScalar);
+
+    if (hasAlpha) {
+      targetCloud->addColorAlphaImageQuantity("test color alpha image", width, height, imageColorAlpha);
+    }
+  }
+}
+
+void addImplicitRendersFromCurrentView() {
+
+  // sample sdf
+  auto torusSDF = [](glm::vec3 p) {
+    float scale = 0.5;
+    p /= scale;
+    p += glm::vec3{1., 0., 1.};
+    glm::vec2 t{1., 0.3};
+    glm::vec2 pxz{p.x, p.z};
+    glm::vec2 q = glm::vec2(glm::length(pxz) - t.x, p.y);
+    return (glm::length(q) - t.y) * scale;
+  };
+  auto boxFrameSDF = [](glm::vec3 p) {
+    float scale = 0.5;
+    p /= scale;
+    float b = 1.;
+    float e = 0.1;
+    p = glm::abs(p) - b;
+    glm::vec3 q = glm::abs(p + e) - e;
+    float out = glm::min(
+        glm::min(
+            glm::length(glm::max(glm::vec3(p.x, q.y, q.z), 0.0f)) + glm::min(glm::max(p.x, glm::max(q.y, q.z)), 0.0f),
+            glm::length(glm::max(glm::vec3(q.x, p.y, q.z), 0.0f)) + glm::min(glm::max(q.x, glm::max(p.y, q.z)), 0.0f)),
+        glm::length(glm::max(glm::vec3(q.x, q.y, p.z), 0.0f)) + glm::min(glm::max(q.x, glm::max(q.y, p.z)), 0.0f));
+    return out * scale;
+  };
+
+  auto colorFunc = [](glm::vec3 p) {
+    glm::vec3 color{0., 0., 0.};
+    if (p.x > 0) {
+      color += glm::vec3{1.0, 0.0, 0.0};
+    }
+    if (p.y > 0) {
+      color += glm::vec3{0.0, 1.0, 0.0};
+    }
+    if (p.z > 0) {
+      color += glm::vec3{0.0, 0.0, 1.0};
+    }
+    return color;
+  };
+
+  auto scalarFunc = [](glm::vec3 p) { return p.x; };
+
+  polyscope::ImplicitRenderOpts opts;
+  // opts.mode = polyscope::ImplicitRenderMode::FixedStep;
+  opts.mode = polyscope::ImplicitRenderMode::SphereMarch;
+  opts.subsampleFactor = 2;
+
+  polyscope::DepthRenderImageQuantity* img = polyscope::renderImplicitSurface("torus sdf", torusSDF, opts);
+  polyscope::DepthRenderImageQuantity* img2 = polyscope::renderImplicitSurface("box sdf", boxFrameSDF, opts);
+  polyscope::ColorRenderImageQuantity* img2Color =
+      polyscope::renderImplicitSurfaceColor("box sdf color", boxFrameSDF, colorFunc, opts);
+  polyscope::ScalarRenderImageQuantity* imgScalar =
+      polyscope::renderImplicitSurfaceScalar("torus sdf scalar", torusSDF, scalarFunc, opts);
+}
+
+void addCameraViews() {
+  polyscope::CameraView* cam1 = polyscope::registerCameraView("cam1", glm::vec3{2., 2., 2.}, glm::vec3{-1., -1., -1.},
+                                                              glm::vec3{0., 1., 0.}, 60, 2.);
+}
+
 void processFileDotMesh(std::string filename) {
   std::vector<std::array<double, 3>> verts;
   std::vector<std::array<int64_t, 8>> cells;
@@ -492,6 +616,8 @@ void addDataToPointCloud(std::string pointCloudName, const std::vector<glm::vec3
   polyscope::getPointCloud(pointCloudName)->addVectorQuantity("random vector", randVec);
   polyscope::getPointCloud(pointCloudName)->addVectorQuantity("unit 'normal' vector", centerNormalVec);
   polyscope::getPointCloud(pointCloudName)->addVectorQuantity("to zero", toZeroVec, polyscope::VectorType::AMBIENT);
+
+  // loadFloatingImageData(polyscope::getPointCloud(pointCloudName));
 }
 
 // PLY files get loaded as point clouds
@@ -538,6 +664,7 @@ void callback() {
   static int numPoints = 2000;
   static float param = 3.14;
   static int loadedMat = 1;
+  static bool depthClick = false;
 
   ImGui::PushItemWidth(100);
 
@@ -550,6 +677,55 @@ void callback() {
   ImGui::SameLine();
   if (ImGui::Button("hi")) {
     polyscope::warning("hi");
+  }
+
+  // some depth & picking stuff
+  ImGui::Checkbox("test scene click", &depthClick);
+  if (depthClick) {
+    ImGuiIO& io = ImGui::GetIO();
+    if (io.MouseClicked[0]) {
+      glm::vec2 screenCoords{io.MousePos.x, io.MousePos.y};
+
+      glm::vec3 worldRay = polyscope::view::screenCoordsToWorldRay(screenCoords);
+      glm::vec3 worldPos = polyscope::view::screenCoordsToWorldPosition(screenCoords);
+      float depth = polyscope::view::screenCoordsToDepth(screenCoords);
+      std::pair<polyscope::Structure*, size_t> pickPair =
+          polyscope::pick::evaluatePickQuery(screenCoords.x, screenCoords.y);
+
+      std::cout << "Polyscope scene test click " << std::endl;
+      std::cout << "    io.MousePos.x: " << io.MousePos.x << " io.MousePos.y: " << io.MousePos.y << std::endl;
+      std::cout << "    screenCoords.x: " << screenCoords.x << " screenCoords.y: " << screenCoords.y << std::endl;
+      std::cout << "    worldRay: " << to_string(worldRay) << std::endl;
+      std::cout << "    worldPos: " << to_string(worldPos) << std::endl;
+      std::cout << "    depth: " << depth << std::endl;
+      if (pickPair.first == nullptr) {
+        std::cout << "    structure: "
+                  << "none" << std::endl;
+      } else {
+        std::cout << "    structure: " << pickPair.first << " element id: " << pickPair.second << std::endl;
+      }
+
+      // Construct point at click location
+      polyscope::registerPointCloud("click point", std::vector<glm::vec3>({worldPos}));
+
+      // Construct unit-length vector pointing in the direction of the click
+      // (this depends only on the camera parameters, and does not require accessing the depth buffer)
+      glm::vec3 root = polyscope::view::getCameraWorldPosition();
+      glm::vec3 target = root + worldRay;
+      polyscope::registerCurveNetworkLine("click dir", std::vector<glm::vec3>({root, target}));
+
+
+      depthClick = false;
+    }
+  }
+
+
+  if (ImGui::Button("add implicits")) {
+    addImplicitRendersFromCurrentView();
+  }
+
+  if (ImGui::Button("add camera views")) {
+    addCameraViews();
   }
 
   ImGui::PopItemWidth();
@@ -599,11 +775,18 @@ int main(int argc, char** argv) {
     addDataToPointCloud("really great points" + std::to_string(j), points);
   }
 
+  // loadFloatingImageData();
+
   // Add a few gui elements
   polyscope::state::userCallback = callback;
 
   // Show the gui
   polyscope::show();
+
+  // main loop using manual frameTick() instead
+  // while (true) {
+  //   polyscope::frameTick();
+  // }
 
   return 0;
 }

@@ -284,7 +284,8 @@ void GLFrameBuffer::setDrawBuffers() {
 
 bool GLFrameBuffer::bindForRendering() {
   bind();
-  render::engine->setCurrentViewport({0, 0, 400, 600});
+  render::engine->currRenderFramebuffer = this;
+  render::engine->setCurrentViewport({0, 0, view::bufferWidth, view::bufferHeight});
   checkGLError();
   return true;
 }
@@ -297,6 +298,12 @@ std::array<float, 4> GLFrameBuffer::readFloat4(int xPos, int yPos) {
   // Read from the buffer
   std::array<float, 4> result = {1., 2., 3., 4.};
 
+  return result;
+}
+
+float GLFrameBuffer::readDepth(int xPos, int yPos) {
+  // Read from the buffer
+  float result = 0.5;
   return result;
 }
 
@@ -1143,6 +1150,12 @@ void MockGLEngine::initialize() {
   GLFrameBuffer* glScreenBuffer = new GLFrameBuffer(view::bufferWidth, view::bufferHeight, true);
   displayBuffer.reset(glScreenBuffer);
 
+
+  // normally we get initial values for the buffer size from the window framework,
+  // with the mock backend we we need to manually set them to some sane value
+  view::bufferWidth = view::windowWidth;
+  view::bufferHeight = view::windowHeight;
+
   updateWindowSize();
 
   populateDefaultShadersAndRules();
@@ -1164,8 +1177,8 @@ void MockGLEngine::swapDisplayBuffers() {}
 
 std::vector<unsigned char> MockGLEngine::readDisplayBuffer() {
   // Get buffer size
-  int w = 400;
-  int h = 600;
+  int w = view::bufferWidth;
+  int h = view::bufferHeight;
 
   // Read from openGL
   size_t buffSize = w * h * 4;
@@ -1185,10 +1198,15 @@ void MockGLEngine::showWindow() {}
 void MockGLEngine::hideWindow() {}
 
 void MockGLEngine::updateWindowSize(bool force) {
-  int newBufferWidth = 400;
-  int newBufferHeight = 600;
-  int newWindowWidth = 400;
-  int newWindowHeight = 600;
+
+  // this silly code mimicks the gl backend version, but it is important that we preserve 
+  // the view::bufferWidth, etc, otherwise it is impossible to manually set the window size
+  // in the mock backend (which appears in unit tests, etc)
+  int newBufferWidth = view::bufferWidth;
+  int newBufferHeight = view::bufferHeight;
+  int newWindowWidth = view::windowWidth;
+  int newWindowHeight = view::windowHeight;
+
   if (force || newBufferWidth != view::bufferWidth || newBufferHeight != view::bufferHeight ||
       newWindowHeight != view::windowHeight || newWindowWidth != view::windowWidth) {
     // Basically a resize callback
@@ -1199,6 +1217,13 @@ void MockGLEngine::updateWindowSize(bool force) {
     view::windowHeight = newWindowHeight;
   }
 }
+
+
+void MockGLEngine::applyWindowSize() { updateWindowSize(true); }
+
+void MockGLEngine::setWindowResizable(bool newVal) {}
+
+bool MockGLEngine::getWindowResizable() { return true; }
 
 std::tuple<int, int> MockGLEngine::getWindowPos() {
   int x = 20;
@@ -1347,6 +1372,7 @@ void MockGLEngine::populateDefaultShadersAndRules() {
   // == Load general base shaders
   registeredShaderPrograms.insert({"MESH", {{FLEX_MESH_VERT_SHADER, FLEX_MESH_FRAG_SHADER}, DrawMode::Triangles}});
   registeredShaderPrograms.insert({"SLICE_TETS", {{SLICE_TETS_VERT_SHADER, SLICE_TETS_GEOM_SHADER, SLICE_TETS_FRAG_SHADER}, DrawMode::Triangles}});
+  registeredShaderPrograms.insert({"INDEXED_MESH", {{FLEX_MESH_VERT_SHADER, FLEX_MESH_FRAG_SHADER}, DrawMode::IndexedTriangles}});
   registeredShaderPrograms.insert({"RAYCAST_SPHERE", {{FLEX_SPHERE_VERT_SHADER, FLEX_SPHERE_GEOM_SHADER, FLEX_SPHERE_FRAG_SHADER}, DrawMode::Points}});
   registeredShaderPrograms.insert({"POINT_QUAD", {{FLEX_POINTQUAD_VERT_SHADER, FLEX_POINTQUAD_GEOM_SHADER, FLEX_POINTQUAD_FRAG_SHADER}, DrawMode::Points}});
   registeredShaderPrograms.insert({"RAYCAST_VECTOR", {{FLEX_VECTOR_VERT_SHADER, FLEX_VECTOR_GEOM_SHADER, FLEX_VECTOR_FRAG_SHADER}, DrawMode::Points}});
@@ -1363,6 +1389,7 @@ void MockGLEngine::populateDefaultShadersAndRules() {
   registeredShaderPrograms.insert({"TEXTURE_DRAW_DOT3", {{TEXTURE_DRAW_VERT_SHADER, DOT3_TEXTURE_DRAW_FRAG_SHADER}, DrawMode::Triangles}});
   registeredShaderPrograms.insert({"TEXTURE_DRAW_MAP3", {{TEXTURE_DRAW_VERT_SHADER, MAP3_TEXTURE_DRAW_FRAG_SHADER}, DrawMode::Triangles}});
   registeredShaderPrograms.insert({"TEXTURE_DRAW_SPHEREBG", {{SPHEREBG_DRAW_VERT_SHADER, SPHEREBG_DRAW_FRAG_SHADER}, DrawMode::Triangles}});
+  registeredShaderPrograms.insert({"TEXTURE_DRAW_RENDERIMAGE_PLAIN", {{TEXTURE_DRAW_VERT_SHADER, PLAIN_RENDERIMAGE_TEXTURE_DRAW_FRAG_SHADER}, DrawMode::Triangles}});
   registeredShaderPrograms.insert({"COMPOSITE_PEEL", {{TEXTURE_DRAW_VERT_SHADER, COMPOSITE_PEEL}, DrawMode::Triangles}});
   registeredShaderPrograms.insert({"DEPTH_COPY", {{TEXTURE_DRAW_VERT_SHADER, DEPTH_COPY}, DrawMode::Triangles}});
   registeredShaderPrograms.insert({"DEPTH_TO_MASK", {{TEXTURE_DRAW_VERT_SHADER, DEPTH_TO_MASK}, DrawMode::Triangles}});
@@ -1402,9 +1429,16 @@ void MockGLEngine::populateDefaultShadersAndRules() {
   registeredShaderRules.insert({"SHADEVALUE_MAG_VALUE2", SHADEVALUE_MAG_VALUE2});
   registeredShaderRules.insert({"ISOLINE_STRIPE_VALUECOLOR", ISOLINE_STRIPE_VALUECOLOR});
   registeredShaderRules.insert({"CHECKER_VALUE2COLOR", CHECKER_VALUE2COLOR});
+
+  // Texture and image things
+  registeredShaderRules.insert({"TEXTURE_ORIGIN_UPPERLEFT", TEXTURE_ORIGIN_UPPERLEFT});
+  registeredShaderRules.insert({"TEXTURE_SET_TRANSPARENCY", TEXTURE_SET_TRANSPARENCY});
+  registeredShaderRules.insert({"TEXTURE_SHADE_COLOR", TEXTURE_SHADE_COLOR});
+  registeredShaderRules.insert({"TEXTURE_PROPAGATE_VALUE", TEXTURE_PROPAGATE_VALUE});
   
   // mesh things
   registeredShaderRules.insert({"MESH_WIREFRAME", MESH_WIREFRAME});
+  registeredShaderRules.insert({"MESH_WIREFRAME_ONLY", MESH_WIREFRAME_ONLY});
   registeredShaderRules.insert({"MESH_BACKFACE_NORMAL_FLIP", MESH_BACKFACE_NORMAL_FLIP});
   registeredShaderRules.insert({"MESH_BACKFACE_DIFFERENT", MESH_BACKFACE_DIFFERENT});
   registeredShaderRules.insert({"MESH_BACKFACE_DARKEN", MESH_BACKFACE_DARKEN});
