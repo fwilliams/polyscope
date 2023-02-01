@@ -33,6 +33,7 @@ bool endsWith(const std::string& str, const std::string& suffix) {
 
 void constructDemoCurveNetwork(std::string curveName, std::vector<glm::vec3> nodes,
                                std::vector<std::array<size_t, 2>> edges) {
+  /* TODO restore
 
   // Add the curve
   if (edges.size() > 0) {
@@ -77,6 +78,7 @@ void constructDemoCurveNetwork(std::string curveName, std::vector<glm::vec3> nod
     polyscope::getCurveNetwork(curveName)->addEdgeColorQuantity("eColor", randColor);
     polyscope::getCurveNetwork(curveName)->addEdgeVectorQuantity("randVecE", randVec);
   }
+  */
 }
 
 void processFileOBJ(std::string filename) {
@@ -93,10 +95,10 @@ void processFileOBJ(std::string filename) {
   }
   auto psMesh = polyscope::registerSurfaceMesh(niceName, vertexPositionsGLM, faceIndices);
 
+
   // Useful data
   size_t nVertices = psMesh->nVertices();
   size_t nFaces = psMesh->nFaces();
-  size_t nEdges = psMesh->nEdges();
 
   // Add some vertex scalars
   std::vector<double> valX(nVertices);
@@ -147,6 +149,9 @@ void processFileOBJ(std::string filename) {
   polyscope::getSurfaceMesh(niceName)->addFaceScalarQuantity("zero", zero);
   polyscope::getSurfaceMesh(niceName)->addFaceColorQuantity("fColor", fColor);
 
+  /*
+  
+  // size_t nEdges = psMesh->nEdges();
 
   // Edge length
   std::vector<double> eLen;
@@ -175,6 +180,8 @@ void processFileOBJ(std::string filename) {
   }
   polyscope::getSurfaceMesh(niceName)->addEdgeScalarQuantity("edge length", eLen);
   polyscope::getSurfaceMesh(niceName)->addHalfedgeScalarQuantity("halfedge length", heLen);
+
+  */
 
 
   // Test error
@@ -318,6 +325,7 @@ polyscope::warning("Some problems come in groups", "detail = " + std::to_string(
     */
   }
 
+  /*
 
   // Add count quantities
   std::vector<std::pair<size_t, int>> vCount;
@@ -413,6 +421,7 @@ polyscope::warning("Some problems come in groups", "detail = " + std::to_string(
     constructDemoCurveNetwork(curveName, vertexPositionsGLM, edges);
   }
 
+  */
 
   /*
 
@@ -553,6 +562,8 @@ void addCameraViews() {
 }
 
 void processFileDotMesh(std::string filename) {
+  /*
+   * TODO restore
   std::vector<std::array<double, 3>> verts;
   std::vector<std::array<int64_t, 8>> cells;
   parseVolumeDotMesh(filename, verts, cells);
@@ -586,6 +597,7 @@ void processFileDotMesh(std::string filename) {
   polyscope::getVolumeMesh(niceName)->addCellScalarQuantity("scalar Q2", scalarC);
   polyscope::getVolumeMesh(niceName)->addVertexVectorQuantity("random vec", randVecV);
   polyscope::getVolumeMesh(niceName)->addCellVectorQuantity("random vec2", randVecC);
+  */
 }
 
 void addDataToPointCloud(std::string pointCloudName, const std::vector<glm::vec3>& points) {
@@ -695,8 +707,10 @@ void callback() {
       std::cout << "Polyscope scene test click " << std::endl;
       std::cout << "    io.MousePos.x: " << io.MousePos.x << " io.MousePos.y: " << io.MousePos.y << std::endl;
       std::cout << "    screenCoords.x: " << screenCoords.x << " screenCoords.y: " << screenCoords.y << std::endl;
-      std::cout << "    worldRay: " << to_string(worldRay) << std::endl;
-      std::cout << "    worldPos: " << to_string(worldPos) << std::endl;
+      std::cout << "    worldRay: ";
+      polyscope::operator<<(std::cout, worldRay) << std::endl;
+      std::cout << "    worldPos: ";
+      polyscope::operator<<(std::cout, worldPos) << std::endl;
       std::cout << "    depth: " << depth << std::endl;
       if (pickPair.first == nullptr) {
         std::cout << "    structure: "
@@ -710,9 +724,12 @@ void callback() {
 
       // Construct unit-length vector pointing in the direction of the click
       // (this depends only on the camera parameters, and does not require accessing the depth buffer)
+      /*
+      TODO restore
       glm::vec3 root = polyscope::view::getCameraWorldPosition();
       glm::vec3 target = root + worldRay;
       polyscope::registerCurveNetworkLine("click dir", std::vector<glm::vec3>({root, target}));
+      */
 
 
       depthClick = false;
