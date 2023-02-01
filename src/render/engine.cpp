@@ -259,9 +259,12 @@ void Engine::buildEngineGui() {
 
     ImGui::SetNextTreeNodeOpen(false, ImGuiCond_FirstUseEver);
     if (ImGui::TreeNode("Tone Mapping")) {
-      ImGui::SliderFloat("exposure", &exposure, 0.1, 2.0, "%.3f", 2.);
-      ImGui::SliderFloat("white level", &whiteLevel, 0.0, 2.0, "%.3f", 2.);
-      ImGui::SliderFloat("gamma", &gamma, 0.5, 3.0, "%.3f", 2.);
+      ImGui::SliderFloat("exposure", &exposure, 0.1, 2.0, "%.3f",
+                         ImGuiSliderFlags_Logarithmic | ImGuiSliderFlags_NoRoundToFormat);
+      ImGui::SliderFloat("white level", &whiteLevel, 0.0, 2.0, "%.3f",
+                         ImGuiSliderFlags_Logarithmic | ImGuiSliderFlags_NoRoundToFormat);
+      ImGui::SliderFloat("gamma", &gamma, 0.5, 3.0, "%.3f",
+                         ImGuiSliderFlags_Logarithmic | ImGuiSliderFlags_NoRoundToFormat);
       ImGui::TreePop();
     }
 
@@ -395,7 +398,7 @@ bool Engine::bindSceneBuffer() {
   return sceneBuffer->bindForRendering();
 }
 
-void Engine::applyLightingTransform(std::shared_ptr<Texture>& texture) {
+void Engine::applyLightingTransform(std::shared_ptr<TextureBuffer>& texture) {
 
   glm::vec4 currV = getCurrentViewport();
 
@@ -910,7 +913,7 @@ void Engine::loadBlendableMaterial(std::string matName, std::string filenameBase
 }
 
 std::shared_ptr<TextureBuffer> Engine::loadMaterialTexture(float* data, int width, int height) {
-  std::shared_ptr<TextureBuffer> t = engine->generateTexture(TextureFormat::RGB16F, width, height, data);
+  std::shared_ptr<TextureBuffer> t = engine->generateTextureBuffer(TextureFormat::RGB16F, width, height, data);
   t->setFilterMode(FilterMode::Linear);
   return t;
 }

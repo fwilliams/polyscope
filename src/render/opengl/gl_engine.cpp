@@ -926,7 +926,7 @@ void GLFrameBuffer::addColorBuffer(std::shared_ptr<TextureBuffer> textureBufferI
   glFramebufferTexture2D(GL_FRAMEBUFFER, colorAttachNum(nColorBuffers), GL_TEXTURE_2D, textureBuffer->getHandle(), 0);
 
   checkGLError();
-  texturesColor.push_back(textureBuffer);
+  textureBuffersColor.push_back(textureBuffer);
   nColorBuffers++;
 }
 
@@ -946,7 +946,7 @@ void GLFrameBuffer::addDepthBuffer(std::shared_ptr<TextureBuffer> textureBufferI
 
   glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, textureBuffer->getHandle(), 0);
   checkGLError();
-  texturesDepth.push_back(textureBuffer);
+  textureBuffersDepth.push_back(textureBuffer);
 }
 
 void GLFrameBuffer::setDrawBuffers() {
@@ -1162,12 +1162,6 @@ void GLShaderProgram::addUniqueTexture(ShaderSpecTexture newTexture) {
   textures.push_back(GLShaderTexture{newTexture.name, newTexture.dim, 777, false, nullptr, nullptr, 777});
 }
 
-
-void GLShaderProgram::deleteAttributeBuffer(GLShaderAttribute& attribute) {
-  glUseProgram(programHandle);
-  glBindVertexArray(vaoHandle);
-  glDeleteBuffers(1, &attribute.VBOLoc);
-}
 
 void GLShaderProgram::compileGLProgram(const std::vector<ShaderStageSpecification>& stages) {
 
