@@ -674,7 +674,7 @@ uint32_t GLAttributeBuffer::getNativeBufferID() { return static_cast<uint32_t>(V
 
 
 // create a 1D texture from data
-GLTextureBuffer::GLTextureBuffer(TextureFormat format_, unsigned int size1D, unsigned char* data)
+GLTextureBuffer::GLTextureBuffer(TextureFormat format_, unsigned int size1D, const unsigned char* data)
     : TextureBuffer(1, format_, size1D) {
 
   glGenTextures(1, &handle);
@@ -684,7 +684,7 @@ GLTextureBuffer::GLTextureBuffer(TextureFormat format_, unsigned int size1D, uns
 
   setFilterMode(FilterMode::Nearest);
 }
-GLTextureBuffer::GLTextureBuffer(TextureFormat format_, unsigned int size1D, float* data)
+GLTextureBuffer::GLTextureBuffer(TextureFormat format_, unsigned int size1D, const float* data)
     : TextureBuffer(1, format_, size1D) {
 
   glGenTextures(1, &handle);
@@ -696,7 +696,8 @@ GLTextureBuffer::GLTextureBuffer(TextureFormat format_, unsigned int size1D, flo
 }
 
 // create a 2D texture from data
-GLTextureBuffer::GLTextureBuffer(TextureFormat format_, unsigned int sizeX_, unsigned int sizeY_, unsigned char* data)
+GLTextureBuffer::GLTextureBuffer(TextureFormat format_, unsigned int sizeX_, unsigned int sizeY_,
+                                 const unsigned char* data)
     : TextureBuffer(2, format_, sizeX_, sizeY_) {
 
   glGenTextures(1, &handle);
@@ -707,7 +708,7 @@ GLTextureBuffer::GLTextureBuffer(TextureFormat format_, unsigned int sizeX_, uns
   setFilterMode(FilterMode::Nearest);
 }
 
-GLTextureBuffer::GLTextureBuffer(TextureFormat format_, unsigned int sizeX_, unsigned int sizeY_, float* data)
+GLTextureBuffer::GLTextureBuffer(TextureFormat format_, unsigned int sizeX_, unsigned int sizeY_, const float* data)
     : TextureBuffer(2, format_, sizeX_, sizeY_) {
 
   glGenTextures(1, &handle);
@@ -2482,22 +2483,23 @@ std::shared_ptr<AttributeBuffer> GLEngine::generateAttributeBuffer(RenderDataTyp
 }
 
 std::shared_ptr<TextureBuffer> GLEngine::generateTextureBuffer(TextureFormat format, unsigned int size1D,
-                                                               unsigned char* data) {
+                                                               const unsigned char* data) {
   GLTextureBuffer* newT = new GLTextureBuffer(format, size1D, data);
   return std::shared_ptr<TextureBuffer>(newT);
 }
 
-std::shared_ptr<TextureBuffer> GLEngine::generateTextureBuffer(TextureFormat format, unsigned int size1D, float* data) {
+std::shared_ptr<TextureBuffer> GLEngine::generateTextureBuffer(TextureFormat format, unsigned int size1D,
+                                                               const float* data) {
   GLTextureBuffer* newT = new GLTextureBuffer(format, size1D, data);
   return std::shared_ptr<TextureBuffer>(newT);
 }
 std::shared_ptr<TextureBuffer> GLEngine::generateTextureBuffer(TextureFormat format, unsigned int sizeX_,
-                                                               unsigned int sizeY_, unsigned char* data) {
+                                                               unsigned int sizeY_, const unsigned char* data) {
   GLTextureBuffer* newT = new GLTextureBuffer(format, sizeX_, sizeY_, data);
   return std::shared_ptr<TextureBuffer>(newT);
 }
 std::shared_ptr<TextureBuffer> GLEngine::generateTextureBuffer(TextureFormat format, unsigned int sizeX_,
-                                                               unsigned int sizeY_, float* data) {
+                                                               unsigned int sizeY_, const float* data) {
   GLTextureBuffer* newT = new GLTextureBuffer(format, sizeX_, sizeY_, data);
   return std::shared_ptr<TextureBuffer>(newT);
 }
@@ -2639,9 +2641,11 @@ void GLEngine::populateDefaultShadersAndRules() {
  
   // Texture and image things
   registeredShaderRules.insert({"TEXTURE_ORIGIN_UPPERLEFT", TEXTURE_ORIGIN_UPPERLEFT});
+  registeredShaderRules.insert({"TEXTURE_ORIGIN_LOWERLEFT", TEXTURE_ORIGIN_LOWERLEFT});
   registeredShaderRules.insert({"TEXTURE_SET_TRANSPARENCY", TEXTURE_SET_TRANSPARENCY});
   registeredShaderRules.insert({"TEXTURE_SHADE_COLOR", TEXTURE_SHADE_COLOR});
   registeredShaderRules.insert({"TEXTURE_PROPAGATE_VALUE", TEXTURE_PROPAGATE_VALUE});
+  registeredShaderRules.insert({"TEXTURE_BILLBOARD_FROM_UNIFORMS", TEXTURE_BILLBOARD_FROM_UNIFORMS});
 
   // mesh things
   registeredShaderRules.insert({"MESH_WIREFRAME", MESH_WIREFRAME});
