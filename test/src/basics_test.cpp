@@ -640,7 +640,6 @@ TEST_F(PolyscopeTest, SurfaceMeshSurfaceGraphPath) {
 // =============== Curve network tests
 // ============================================================
 
-/* TODO RESTORE
 
 std::tuple<std::vector<glm::vec3>, std::vector<std::array<size_t, 2>>> getCurveNetwork() {
   std::vector<glm::vec3> points;
@@ -758,8 +757,6 @@ TEST_F(PolyscopeTest, CurveNetworkFaceVector) {
   polyscope::show(3);
   polyscope::removeAllStructures();
 }
-
-*/
 
 // ============================================================
 // =============== Volume mesh tests
