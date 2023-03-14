@@ -340,6 +340,9 @@ polyscope::warning("Some problems come in groups", "detail = " + std::to_string(
   polyscope::getSurfaceMesh(niceName)->addVertexCountQuantity("sample count", vCount);
   polyscope::getSurfaceMesh(niceName)->addVertexIsolatedScalarQuantity("sample isolated", vVal);
 
+  */
+
+
   { // Parameterizations
     std::vector<std::array<double, 2>> cornerParam;
     for (size_t iF = 0; iF < nFaces; iF++) {
@@ -383,6 +386,8 @@ polyscope::warning("Some problems come in groups", "detail = " + std::to_string(
 
     polyscope::getSurfaceMesh(niceName)->addLocalParameterizationQuantity("param vert local test", vertParamLocal);
   }
+
+  /*
 
   { // Add a surface graph quantity
 
