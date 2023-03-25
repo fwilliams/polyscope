@@ -1264,7 +1264,7 @@ TEST_F(PolyscopeTest, RefreshMultiTest) {
     q2->setEnabled(true);
   }
 
-  { // Curve network 
+  { // Curve network
     auto psCurve = registerCurveNetwork();
     std::vector<glm::vec3> vals(psCurve->nEdges(), {1., 2., 3.});
     auto q3 = psCurve->addEdgeVectorQuantity("vals", vals);
@@ -1276,6 +1276,15 @@ TEST_F(PolyscopeTest, RefreshMultiTest) {
   polyscope::refresh();
   polyscope::show(3);
 
+  polyscope::removeAllStructures();
+}
+
+
+// Make sure that creating an empty buffer does not throw errors
+TEST_F(PolyscopeTest, EmptyBuffer) {
+  std::vector<glm::vec3> empty_points;
+  polyscope::PointCloud* psPoints = polyscope::registerPointCloud("empty cloud", empty_points);
+  polyscope::show(3);
   polyscope::removeAllStructures();
 }
 
@@ -1295,7 +1304,7 @@ TEST_F(PolyscopeTest, TransparencyTest) {
     q2->setEnabled(true);
   }
 
-  { // Curve network 
+  { // Curve network
     auto psCurve = registerCurveNetwork();
     std::vector<glm::vec3> vals(psCurve->nEdges(), {1., 2., 3.});
     auto q3 = psCurve->addEdgeVectorQuantity("vals", vals);
