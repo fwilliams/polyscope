@@ -198,8 +198,8 @@ ShaderReplacementRule::ShaderReplacementRule(std::string ruleName_,
 ShaderProgram::ShaderProgram(DrawMode dm) : drawMode(dm), uniqueID(render::engine->getNextUniqueID()) {
 
   drawMode = dm;
-  if (dm == DrawMode::IndexedLines || dm == DrawMode::IndexedLineStrip || dm == DrawMode::IndexedLineStripAdjacency ||
-      dm == DrawMode::IndexedTriangles) {
+  if (dm == DrawMode::IndexedPoints || dm == DrawMode::IndexedLines || dm == DrawMode::IndexedLineStrip ||
+      dm == DrawMode::IndexedLineStripAdjacency || dm == DrawMode::IndexedTriangles) {
     useIndex = true;
   }
 

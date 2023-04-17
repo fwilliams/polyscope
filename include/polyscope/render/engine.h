@@ -23,12 +23,13 @@ namespace polyscope {
 // The drawing modes available
 enum class DrawMode {
   Points = 0,
-  LinesAdjacency,
+  IndexedPoints,
   Triangles,
-  TrianglesAdjacency,
   IndexedTriangles,
+  TrianglesAdjacency,
   Lines,
   IndexedLines,
+  LinesAdjacency,
   IndexedLineStrip,
   IndexedLinesAdjacency,
   IndexedLineStripAdjacency
@@ -52,6 +53,7 @@ enum class RenderDataType {
   Vector3UInt,
   Vector4UInt
 };
+enum class ShaderAttributePurpose { Input, FeedbackOutput };
 
 int dimension(const TextureFormat& x);
 std::string modeName(const TransparencyMode& m);
@@ -253,12 +255,18 @@ struct ShaderSpecUniform {
   const RenderDataType type;
 };
 struct ShaderSpecAttribute {
-  ShaderSpecAttribute(std::string name_, RenderDataType type_) : name(name_), type(type_), arrayCount(1) {}
+  ShaderSpecAttribute(std::string name_, RenderDataType type_)
+      : name(name_), type(type_), arrayCount(1), purpose(ShaderAttributePurpose::Input) {}
   ShaderSpecAttribute(std::string name_, RenderDataType type_, int arrayCount_)
-      : name(name_), type(type_), arrayCount(arrayCount_) {}
+      : name(name_), type(type_), arrayCount(arrayCount_), purpose(ShaderAttributePurpose::Input) {}
+  ShaderSpecAttribute(std::string name_, RenderDataType type_, ShaderAttributePurpose purpose_)
+      : name(name_), type(type_), arrayCount(1), purpose(purpose_) {}
+  ShaderSpecAttribute(std::string name_, RenderDataType type_, int arrayCount_, ShaderAttributePurpose purpose_)
+      : name(name_), type(type_), arrayCount(arrayCount_), purpose(purpose_) {}
   const std::string name;
   const RenderDataType type;
   const int arrayCount; // number of times this element is repeated in an array
+  const ShaderAttributePurpose purpose;
 };
 struct ShaderSpecTexture {
   const std::string name;
@@ -371,6 +379,9 @@ public:
 
   // Draw!
   virtual void draw() = 0;
+ 
+  // Like a draw pass, but only populates feedback values
+  virtual void computeFeedback() = 0;
 
   virtual void validateData() = 0;
 
@@ -569,8 +580,6 @@ public:
   FrameBuffer* currRenderFramebuffer = nullptr;
 
 protected:
-  // TODO Manage a cache of compiled shaders?
-
   // Render state
   int ssaaFactor = 1;
   bool enableFXAA = true;

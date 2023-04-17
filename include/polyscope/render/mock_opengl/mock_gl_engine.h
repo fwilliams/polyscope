@@ -158,6 +158,7 @@ struct GLShaderAttribute {
   std::string name;
   RenderDataType type;
   int arrayCount;
+  ShaderAttributePurpose purpose;
   std::shared_ptr<GLAttributeBuffer> buff; // the buffer that we will actually use
 };
 
@@ -178,6 +179,7 @@ public:
   ~GLCompiledProgram();
 
   DrawMode getDrawMode() const { return drawMode; }
+  bool getHasFeedback() const { return hasFeedback; }
   std::vector<GLShaderUniform> getUniforms() const { return uniforms; }
   std::vector<GLShaderAttribute> getAttributes() const { return attributes; }
   std::vector<GLShaderTexture> getTextures() const { return textures; }
@@ -187,6 +189,7 @@ private:
   std::vector<GLShaderUniform> uniforms;
   std::vector<GLShaderAttribute> attributes;
   std::vector<GLShaderTexture> textures;
+  bool hasFeedback = false;
 
   void compileGLProgram(const std::vector<ShaderStageSpecification>& stages);
   void setDataLocations();
@@ -260,6 +263,7 @@ public:
 
   // Draw!
   void draw() override;
+  void computeFeedback() override;
   void validateData() override;
 
 protected:
@@ -280,6 +284,7 @@ private:
 
   // Drawing related
   void activateTextures();
+  void bindForFeedback();
 
   std::shared_ptr<GLCompiledProgram> compiledProgram;
 };

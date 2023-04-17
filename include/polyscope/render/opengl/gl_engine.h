@@ -205,7 +205,9 @@ struct GLShaderAttribute {
   std::string name;
   RenderDataType type;
   int arrayCount;
+  ShaderAttributePurpose purpose;
   AttributeLocation location;              // -1 means "no location", usually because it was optimized out
+  GLuint transformOutInd;                  // only used if purpose == ShaderAttributePurpose::FeedbackOutput
   std::shared_ptr<GLAttributeBuffer> buff; // the buffer that we will actually use
 };
 
@@ -228,6 +230,7 @@ public:
 
   ProgramHandle getHandle() const { return programHandle; }
   DrawMode getDrawMode() const { return drawMode; }
+  bool getHasFeedback() const { return hasFeedback; }
   std::vector<GLShaderUniform> getUniforms() const { return uniforms; }
   std::vector<GLShaderAttribute> getAttributes() const { return attributes; }
   std::vector<GLShaderTexture> getTextures() const { return textures; }
@@ -238,6 +241,7 @@ private:
   std::vector<GLShaderUniform> uniforms;
   std::vector<GLShaderAttribute> attributes;
   std::vector<GLShaderTexture> textures;
+  bool hasFeedback = false;
 
   void compileGLProgram(const std::vector<ShaderStageSpecification>& stages);
   void setDataLocations();
@@ -311,6 +315,7 @@ public:
 
   // Draw!
   void draw() override;
+  void computeFeedback() override;
   void validateData() override;
 
 protected:
@@ -331,6 +336,7 @@ private:
 
   // Drawing related
   void activateTextures();
+  void bindForFeedback();
 
   // GL pointers for various useful things
   std::shared_ptr<GLCompiledProgram> compiledProgram;

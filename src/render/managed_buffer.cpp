@@ -67,6 +67,8 @@ void ManagedBuffer<T>::markHostBufferUpdated() {
     renderAttributeBuffer->setData(data);
     requestRedraw();
   }
+
+  updateIndexedViews();
 }
 
 template <typename T>
@@ -164,15 +166,14 @@ ManagedBuffer<T>::getIndexedRenderAttributeBuffer(ManagedBuffer<uint32_t>& indic
   removeDeletedIndexedViews(); // periodic filtering
 
   // Check if we have already created this indexed view, and if so just return it
-  for (std::tuple<render::ManagedBuffer<uint32_t>*, std::weak_ptr<render::AttributeBuffer>>& existingViewTup :
-       existingIndexedViews) {
+  for (ExistingViewEntry& view : existingIndexedViews) {
 
     // both the cache-key source index ptr and the view buffer ptr must still be alive (and the index must match)
     // note that we can't verify that the index buffer is still alive, you will just get memory errors here if it
     // has been deleted
-    std::shared_ptr<render::AttributeBuffer> viewBufferPtr = std::get<1>(existingViewTup).lock();
+    std::shared_ptr<render::AttributeBuffer> viewBufferPtr = view.viewBuffer.lock();
     if (viewBufferPtr) {
-      render::ManagedBuffer<uint32_t>& indexBufferCand = *(std::get<0>(existingViewTup));
+      render::ManagedBuffer<uint32_t>& indexBufferCand = *view.indices;
       if (indexBufferCand.uniqueID == indices.uniqueID) {
         return viewBufferPtr;
       }
@@ -185,7 +186,7 @@ ManagedBuffer<T>::getIndexedRenderAttributeBuffer(ManagedBuffer<uint32_t>& indic
   indices.ensureHostBufferPopulated();
   std::vector<T> expandData = gather(data, indices.data);
   newBuffer->setData(expandData); // initially populate
-  existingIndexedViews.emplace_back(&indices, newBuffer);
+  existingIndexedViews.push_back({&indices, newBuffer, nullptr});
 
   return newBuffer;
 }
@@ -194,36 +195,56 @@ template <typename T>
 void ManagedBuffer<T>::updateIndexedViews() {
   removeDeletedIndexedViews(); // periodic filtering
 
-  for (std::tuple<render::ManagedBuffer<uint32_t>*, std::weak_ptr<render::AttributeBuffer>>& existingViewTup :
-       existingIndexedViews) {
+  for (ExistingViewEntry& view : existingIndexedViews) {
 
-    std::shared_ptr<render::AttributeBuffer> viewBufferPtr = std::get<1>(existingViewTup).lock();
+    std::shared_ptr<render::AttributeBuffer> viewBufferPtr = view.viewBuffer.lock();
     if (!viewBufferPtr) continue; // skip if it has been deleted (will be removed eventually)
 
     // note: index buffer must still be alive here. we can't check it, you will just get memory errors
     // if it has been deleted
-    render::ManagedBuffer<uint32_t>& indices = *std::get<0>(existingViewTup);
+
+    render::ManagedBuffer<uint32_t>& indices = *view.indices;
     render::AttributeBuffer& viewBuffer = *viewBufferPtr;
 
-    // apply the indexing and set the data
-    indices.ensureHostBufferPopulated();
-    std::vector<T> expandData = gather(data, indices.data);
-    viewBuffer.setData(expandData);
+    // update the data (depending on where it currently lives)
+    switch (currentCanonicalDataSource()) {
+    case CanonicalDataSource::HostData: {
+      // Host-side update
+      indices.ensureHostBufferPopulated();
+      std::vector<T> expandData = gather(data, indices.data);
+      viewBuffer.setData(expandData);
+      break;
+    }
 
-    // TODO fornow, only CPU-side updating is supported. Add direct GPU-side support using the bufferIndexCopyProgram
-    // below.
+    case CanonicalDataSource::NeedsCompute: {
+      // I think this is a bug? Or maybe it is okay and we should just recompute? Let's throw an error
+      // until we come up with a case where we actually want this behavior.
+      exception("ManagedBuffer error: indexed view is being updated, but needs compute");
+      break;
+    }
+
+    case CanonicalDataSource::RenderBuffer: {
+      // Device-side update
+      ensureHaveBufferIndexCopyProgram(view.deviceUpdateProgram, indices, viewBufferPtr);
+      view.deviceUpdateProgram->computeFeedback();
+      break;
+    }
+    }
   }
 }
 
 template <typename T>
 void ManagedBuffer<T>::removeDeletedIndexedViews() {
+
+
+  // TODO FIXME MEMORY LEAK: shared pointer we're checking can get passed in to the buffer index copy program in
+  // updateIndexedViews(), and when that happens we never actually delete the buffer...
+
   // "erase-remove idiom"
   // (remove list entries for which the view weak_ptr has .expired() == true
   existingIndexedViews.erase(
-      std::remove_if(
-          existingIndexedViews.begin(), existingIndexedViews.end(),
-          [&](const std::tuple<render::ManagedBuffer<uint32_t>*, std::weak_ptr<render::AttributeBuffer>>& entry)
-              -> bool { return std::get<1>(entry).expired(); }),
+      std::remove_if(existingIndexedViews.begin(), existingIndexedViews.end(),
+                     [&](const ExistingViewEntry& entry) -> bool { return entry.viewBuffer.expired(); }),
       existingIndexedViews.end());
 }
 
@@ -258,20 +279,27 @@ typename ManagedBuffer<T>::CanonicalDataSource ManagedBuffer<T>::currentCanonica
 
 
 template <typename T>
-void ManagedBuffer<T>::ensureHaveBufferIndexCopyProgram() {
-  if (bufferIndexCopyProgram) return;
+void ManagedBuffer<T>::ensureHaveBufferIndexCopyProgram(std::shared_ptr<render::ShaderProgram>& deviceUpdateProgram,
+                                                        render::ManagedBuffer<uint32_t>& indices,
+                                                        std::shared_ptr<render::AttributeBuffer>& target) {
+
+  if (deviceUpdateProgram) return;
 
   // sanity check
   if (!renderAttributeBuffer) exception("ManagedBuffer " + name + " asked to copy indices, but has no buffers");
 
-  // TODO allocate the transform feedback program
+  // TODO FIXME handle other data types
+  deviceUpdateProgram =
+      render::engine->requestShader("FEEDBACK_GATHER_FLOAT3_VERT_SHADER", {}, ShaderReplacementDefaults::Process);
+  
+  deviceUpdateProgram->setAttribute("a_val_in", renderAttributeBuffer);
+  deviceUpdateProgram->setAttribute("a_val_out", target);
+
+  // TODO: this does a device-host copy on the indices, which is uneeded...
+  indices.ensureHostBufferPopulated();
+  deviceUpdateProgram->setIndex(indices.data);
 }
 
-template <typename T>
-void ManagedBuffer<T>::invokeBufferIndexCopyProgram() {
-  ensureHaveBufferIndexCopyProgram();
-  bufferIndexCopyProgram->draw();
-}
 
 // === Explicit template instantiation for the supported types
 

@@ -13,6 +13,7 @@
 // all the shaders
 #include "polyscope/render/opengl/shaders/common.h"
 #include "polyscope/render/opengl/shaders/cylinder_shaders.h"
+#include "polyscope/render/opengl/shaders/feedback_shaders.h"
 #include "polyscope/render/opengl/shaders/gizmo_shaders.h"
 #include "polyscope/render/opengl/shaders/ground_plane_shaders.h"
 #include "polyscope/render/opengl/shaders/histogram_shaders.h"
@@ -741,7 +742,19 @@ GLCompiledProgram::GLCompiledProgram(const std::vector<ShaderStageSpecification>
 
 GLCompiledProgram::~GLCompiledProgram() {}
 
-void GLCompiledProgram::compileGLProgram(const std::vector<ShaderStageSpecification>& stages) {}
+void GLCompiledProgram::compileGLProgram(const std::vector<ShaderStageSpecification>& stages) {
+
+  // If this program uses transform feedback, set it up
+  std::vector<const char*> transformOutNames;
+  for (GLShaderAttribute& a : attributes) {
+    if (a.purpose == ShaderAttributePurpose::FeedbackOutput) {
+      transformOutNames.emplace_back(a.name.c_str());
+    }
+  }
+  if (!transformOutNames.empty()) {
+    hasFeedback = true;
+  }
+}
 
 void GLCompiledProgram::setDataLocations() {
   // Uniforms
@@ -768,7 +781,8 @@ void GLCompiledProgram::addUniqueAttribute(ShaderSpecAttribute newAttribute) {
       return;
     }
   }
-  attributes.push_back(GLShaderAttribute{newAttribute.name, newAttribute.type, newAttribute.arrayCount, nullptr});
+  attributes.push_back(
+      GLShaderAttribute{newAttribute.name, newAttribute.type, newAttribute.arrayCount, newAttribute.purpose, nullptr});
 }
 
 void GLCompiledProgram::addUniqueUniform(ShaderSpecUniform newUniform) {
@@ -1533,16 +1547,29 @@ void GLShaderProgram::activateTextures() {
   }
 }
 
+void GLShaderProgram::computeFeedback() { draw(); }
+
+void GLShaderProgram::bindForFeedback() {
+  for (const GLShaderAttribute& a : attributes) {
+    if (a.purpose != ShaderAttributePurpose::FeedbackOutput) continue;
+  }
+}
+
 void GLShaderProgram::draw() {
   validateData();
 
   if (usePrimitiveRestart) {
   }
 
+  if (compiledProgram->getHasFeedback()) {
+    bindForFeedback();
+  }
   activateTextures();
 
   switch (drawMode) {
   case DrawMode::Points:
+    break;
+  case DrawMode::IndexedPoints:
     break;
   case DrawMode::Triangles:
     break;
@@ -1898,6 +1925,8 @@ void MockGLEngine::populateDefaultShadersAndRules() {
   registerShaderProgram("SCALAR_TEXTURE_COLORMAP", {TEXTURE_DRAW_VERT_SHADER, SCALAR_TEXTURE_COLORMAP}, DrawMode::Triangles);
   registerShaderProgram("BLUR_RGB", {TEXTURE_DRAW_VERT_SHADER, BLUR_RGB}, DrawMode::Triangles);
   registerShaderProgram("TRANSFORMATION_GIZMO_ROT", {TRANSFORMATION_GIZMO_ROT_VERT, TRANSFORMATION_GIZMO_ROT_FRAG}, DrawMode::Triangles);
+
+  registerShaderProgram("FEEDBACK_GATHER_FLOAT3_VERT_SHADER", {FEEDBACK_GATHER_FLOAT3_VERT_SHADER}, DrawMode::IndexedPoints);
 
   // === Load rules
 

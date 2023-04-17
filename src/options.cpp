@@ -51,9 +51,9 @@ std::function<std::tuple<ImFontAtlas*, ImFont*, ImFont*>()> prepareImGuiFontsCal
 
 // enabled by default in debug mode
 #ifndef NDEBUG
-bool enableRenderErrorChecks = false;
-#else
 bool enableRenderErrorChecks = true;
+#else
+bool enableRenderErrorChecks = false;
 #endif
 
 } // namespace options

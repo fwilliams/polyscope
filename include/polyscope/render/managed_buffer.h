@@ -131,8 +131,12 @@ protected:
   // == Internal representation of indexed views
   // NOTE: this seems like a problem, we are storing pointers as keys in a cache. Here, it works out because if the key
   // ptr becomes invalid, the value weak_ptr must also be invalid, and we check that before dereferencing the key.
-  std::vector<std::tuple<render::ManagedBuffer<uint32_t>*, std::weak_ptr<render::AttributeBuffer>>>
-      existingIndexedViews;
+  struct ExistingViewEntry {
+    render::ManagedBuffer<uint32_t>* indices;
+    std::weak_ptr<render::AttributeBuffer> viewBuffer;
+    std::shared_ptr<render::ShaderProgram> deviceUpdateProgram;
+  };
+  std::vector<ExistingViewEntry> existingIndexedViews;
   void updateIndexedViews();
   void removeDeletedIndexedViews();
 
@@ -144,9 +148,9 @@ protected:
   CanonicalDataSource currentCanonicalDataSource();
 
   // Manage the program which copies indexed data from the renderBuffer to the indexed views
-  void ensureHaveBufferIndexCopyProgram();
-  void invokeBufferIndexCopyProgram();
-  std::shared_ptr<render::ShaderProgram> bufferIndexCopyProgram;
+  void ensureHaveBufferIndexCopyProgram(std::shared_ptr<render::ShaderProgram>& deviceUpdateProgam,
+                                        render::ManagedBuffer<uint32_t>& indices,
+                                        std::shared_ptr<render::AttributeBuffer>& target);
 };
 
 

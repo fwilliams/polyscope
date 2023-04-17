@@ -1,3 +1,4 @@
+#include "polyscope/options.h"
 #include "polyscope/polyscope.h"
 
 #include "polyscope/combining_hash_functions.h"
@@ -52,10 +53,11 @@ void initialize() {
 
   // Create the initial point cloud
   std::vector<glm::vec3> points(nPts);
-  polyscope::registerPointCloud("points", points);
+  polyscope::registerCurveNetworkLine("curve", points);
 
   if (gpuDirect) {
-    uint32_t buffID = polyscope::getPointCloud("points")->points.getRenderAttributeBuffer()->getNativeBufferID();
+    uint32_t buffID =
+        polyscope::getCurveNetwork("curve")->nodePositions.getRenderAttributeBuffer()->getNativeBufferID();
     initializeOpenGLMappedBuffer(buffID, glResource);
   }
 }
@@ -67,13 +69,13 @@ void updatePolyscopeData() {
 
     // copy without leaving the GPU via CUDA interop
     copyPositionsToGL(cudaPosBuffer, glResource, nPts);
-    polyscope::getPointCloud("points")->points.markRenderAttributeBufferUpdated();
+    polyscope::getCurveNetwork("curve")->nodePositions.markRenderAttributeBufferUpdated();
 
   } else {
     // copy the "standard" way via the CPU
     std::vector<std::array<float, 3>> newPos = getPositionsCPU(cudaPosBuffer, nPts);
 
-    polyscope::getPointCloud("points")->updatePointPositions(newPos);
+    polyscope::getCurveNetwork("curve")->updateNodePositions(newPos);
   }
 }
 
@@ -115,6 +117,8 @@ int main(int argc, char** argv) {
   polyscope::options::groundPlaneMode = polyscope::GroundPlaneMode::ShadowOnly;
 
   printCUDAInfo();
+
+  std::cout << std::boolalpha << "error checks : " << polyscope::options::enableRenderErrorChecks << std::endl;
 
   // Initialize polyscope
   polyscope::init();

@@ -16,6 +16,7 @@
 // all the shaders
 #include "polyscope/render/opengl/shaders/common.h"
 #include "polyscope/render/opengl/shaders/cylinder_shaders.h"
+#include "polyscope/render/opengl/shaders/feedback_shaders.h"
 #include "polyscope/render/opengl/shaders/gizmo_shaders.h"
 #include "polyscope/render/opengl/shaders/ground_plane_shaders.h"
 #include "polyscope/render/opengl/shaders/histogram_shaders.h"
@@ -584,7 +585,7 @@ std::vector<float> GLAttributeBuffer::getDataRange_float(size_t ind, size_t coun
   if (!isSet() || ind + count > static_cast<size_t>(getDataSize())) exception("bad getData");
   if (getType() != RenderDataType::Float) exception("bad getData type");
   bind();
-  std::vector<float> readValues;
+  std::vector<float> readValues(count);
   glGetBufferSubData(getTarget(), ind * sizeof(float), count * sizeof(float), &readValues.front());
   return readValues;
 }
@@ -602,7 +603,7 @@ std::vector<glm::vec2> GLAttributeBuffer::getDataRange_vec2(size_t ind, size_t c
   if (!isSet() || ind + count > static_cast<size_t>(getDataSize())) exception("bad getData");
   if (getType() != RenderDataType::Vector2Float) exception("bad getData type");
   bind();
-  std::vector<glm::vec2> readValues;
+  std::vector<glm::vec2> readValues(count);
   glGetBufferSubData(getTarget(), ind * sizeof(glm::vec2), count * sizeof(glm::vec2), &readValues.front());
   return readValues;
 }
@@ -610,7 +611,7 @@ std::vector<glm::vec3> GLAttributeBuffer::getDataRange_vec3(size_t ind, size_t c
   if (!isSet() || ind + count > static_cast<size_t>(getDataSize())) exception("bad getData");
   if (getType() != RenderDataType::Vector3Float) exception("bad getData type");
   bind();
-  std::vector<glm::vec3> readValues;
+  std::vector<glm::vec3> readValues(count);
   glGetBufferSubData(getTarget(), ind * sizeof(glm::vec3), count * sizeof(glm::vec3), &readValues.front());
   return readValues;
 }
@@ -618,7 +619,7 @@ std::vector<glm::vec4> GLAttributeBuffer::getDataRange_vec4(size_t ind, size_t c
   if (!isSet() || ind + count > static_cast<size_t>(getDataSize())) exception("bad getData");
   if (getType() != RenderDataType::Vector4Float) exception("bad getData type");
   bind();
-  std::vector<glm::vec4> readValues;
+  std::vector<glm::vec4> readValues(count);
   glGetBufferSubData(getTarget(), ind * sizeof(glm::vec4), count * sizeof(glm::vec4), &readValues.front());
   return readValues;
 }
@@ -626,7 +627,7 @@ std::vector<int> GLAttributeBuffer::getDataRange_int(size_t ind, size_t count) {
   if (!isSet() || ind + count > static_cast<size_t>(getDataSize())) exception("bad getData");
   if (getType() != RenderDataType::Int) exception("bad getData type");
   bind();
-  std::vector<GLint> readValues;
+  std::vector<GLint> readValues(count);
   glGetBufferSubData(getTarget(), ind * sizeof(GLint), count * sizeof(GLint), &readValues.front());
 
   // probably does nothing
@@ -641,7 +642,7 @@ std::vector<uint32_t> GLAttributeBuffer::getDataRange_uint32(size_t ind, size_t 
   if (!isSet() || ind + count > static_cast<size_t>(getDataSize())) exception("bad getData");
   if (getType() != RenderDataType::UInt) exception("bad getData type");
   bind();
-  std::vector<uint32_t> readValues;
+  std::vector<uint32_t> readValues(count);
   glGetBufferSubData(getTarget(), ind * sizeof(uint32_t), count * sizeof(uint32_t), &readValues.front());
   return readValues;
 }
@@ -649,7 +650,7 @@ std::vector<glm::uvec2> GLAttributeBuffer::getDataRange_uvec2(size_t ind, size_t
   if (!isSet() || ind + count > static_cast<size_t>(getDataSize())) exception("bad getData");
   if (getType() != RenderDataType::Vector2Float) exception("bad getData type");
   bind();
-  std::vector<glm::uvec2> readValues;
+  std::vector<glm::uvec2> readValues(count);
   glGetBufferSubData(getTarget(), ind * sizeof(glm::uvec2), count * sizeof(glm::uvec2), &readValues.front());
   return readValues;
 }
@@ -657,7 +658,7 @@ std::vector<glm::uvec3> GLAttributeBuffer::getDataRange_uvec3(size_t ind, size_t
   if (!isSet() || ind + count > static_cast<size_t>(getDataSize())) exception("bad getData");
   if (getType() != RenderDataType::Vector3Float) exception("bad getData type");
   bind();
-  std::vector<glm::uvec3> readValues;
+  std::vector<glm::uvec3> readValues(count);
   glGetBufferSubData(getTarget(), ind * sizeof(glm::uvec3), count * sizeof(glm::uvec3), &readValues.front());
   return readValues;
 }
@@ -665,7 +666,7 @@ std::vector<glm::uvec4> GLAttributeBuffer::getDataRange_uvec4(size_t ind, size_t
   if (!isSet() || ind + count > static_cast<size_t>(getDataSize())) exception("bad getData");
   if (getType() != RenderDataType::Vector4Float) exception("bad getData type");
   bind();
-  std::vector<glm::uvec4> readValues;
+  std::vector<glm::uvec4> readValues(count);
   glGetBufferSubData(getTarget(), ind * sizeof(glm::uvec4), count * sizeof(glm::uvec4), &readValues.front());
   return readValues;
 }
@@ -1156,6 +1157,22 @@ void GLCompiledProgram::compileGLProgram(const std::vector<ShaderStageSpecificat
     glAttachShader(programHandle, h);
   }
 
+  // If this program uses transform feedback, set it up
+  std::vector<const char*> transformOutNames;
+  for (GLShaderAttribute& a : attributes) {
+    if (a.purpose == ShaderAttributePurpose::FeedbackOutput) {
+      a.transformOutInd = transformOutNames.size();
+      transformOutNames.emplace_back(a.name.c_str());
+    }
+  }
+  if (!transformOutNames.empty()) {
+    std::cout << "outName " << transformOutNames.front() << std::endl;
+    glTransformFeedbackVaryings(programHandle, transformOutNames.size(), &transformOutNames.front(),
+                                GL_SEPARATE_ATTRIBS);
+    hasFeedback = true;
+  }
+
+
   // Link the program
   glLinkProgram(programHandle);
   if (options::verbosity > 2) {
@@ -1194,18 +1211,22 @@ void GLCompiledProgram::setDataLocations() {
   for (GLShaderAttribute& a : attributes) {
     a.location = glGetAttribLocation(programHandle, a.name.c_str());
     if (a.location == -1) {
-      info("failed to get location for attribute " + a.name);
+      if (options::verbosity > 2) {
+        info("failed to get location for attribute " + a.name);
+      }
+      // exception("failed to get location for attribute " + a.name);
     }
-    // exception("failed to get location for attribute " + a.name);
   }
 
   // Textures
   for (GLShaderTexture& t : textures) {
     t.location = glGetUniformLocation(programHandle, t.name.c_str());
     if (t.location == -1) {
-      info("failed to get location for texture " + t.name);
+      if (options::verbosity > 2) {
+        info("failed to get location for texture " + t.name);
+      }
+      // exception("failed to get location for texture " + t.name);
     }
-    // exception("failed to get location for texture " + t.name);
   }
 
   checkGLError();
@@ -1216,13 +1237,15 @@ void GLCompiledProgram::addUniqueAttribute(ShaderSpecAttribute newAttribute) {
     if (a.name == newAttribute.name) {
 
       // if it occurs twice, confirm that the occurences match
-      if (a.type != newAttribute.type)
+      if (a.type != newAttribute.type) {
         exception("attribute " + a.name + " appears twice in program with different types");
+      }
 
       return;
     }
   }
-  attributes.push_back(GLShaderAttribute{newAttribute.name, newAttribute.type, newAttribute.arrayCount, -1, nullptr});
+  attributes.push_back(GLShaderAttribute{newAttribute.name, newAttribute.type, newAttribute.arrayCount,
+                                         newAttribute.purpose, -1, 777, nullptr});
 }
 
 void GLCompiledProgram::addUniqueUniform(ShaderSpecUniform newUniform) {
@@ -1230,7 +1253,9 @@ void GLCompiledProgram::addUniqueUniform(ShaderSpecUniform newUniform) {
     if (u.name == newUniform.name) {
 
       // if it occurs twice, confirm that the occurences match
-      if (u.type != newUniform.type) exception("uniform " + u.name + " appears twice in program with different types");
+      if (u.type != newUniform.type) {
+        exception("uniform " + u.name + " appears twice in program with different types");
+      }
 
       return;
     }
@@ -1243,8 +1268,9 @@ void GLCompiledProgram::addUniqueTexture(ShaderSpecTexture newTexture) {
     if (t.name == newTexture.name) {
 
       // if it occurs twice, confirm that the occurences match
-      if (t.dim != newTexture.dim)
+      if (t.dim != newTexture.dim) {
         exception("texture " + t.name + " appears twice in program with different dimensions");
+      }
 
       return;
     }
@@ -1308,7 +1334,10 @@ void GLShaderProgram::setAttribute(std::string name, std::shared_ptr<AttributeBu
   for (GLShaderAttribute& a : attributes) {
     if (a.name == name) {
 
-      if (a.location == -1) return; // attributes which were optimized out or something, do nothing
+      if (a.location == -1 && a.purpose != ShaderAttributePurpose::FeedbackOutput) {
+        // attributes which were optimized out or something, do nothing
+        return;
+      }
 
       // check that types match
       int compatCount = renderDataTypeCountCompatbility(a.type, externalBuffer->getType());
@@ -1325,13 +1354,13 @@ void GLShaderProgram::setAttribute(std::string name, std::shared_ptr<AttributeBu
       if (!engineExtBuff) throw std::invalid_argument("attribute " + name + " external buffer engine type cast failed");
 
       a.buff = engineExtBuff;
-      checkGLError();
-
       a.buff->bind();
       checkGLError();
 
-      assignBufferToVAO(a);
-      checkGLError();
+      if (a.location != -1) {
+        assignBufferToVAO(a);
+        checkGLError();
+      }
       return;
     }
   }
@@ -2099,6 +2128,98 @@ void GLShaderProgram::activateTextures() {
   }
 }
 
+void GLShaderProgram::bindForFeedback() {
+  for (const GLShaderAttribute& a : attributes) {
+    if (a.purpose != ShaderAttributePurpose::FeedbackOutput) continue;
+    glBindBufferBase(GL_TRANSFORM_FEEDBACK_BUFFER, a.transformOutInd, a.buff->getHandle());
+  }
+}
+
+void GLShaderProgram::computeFeedback() {
+  validateData();
+
+  if (!compiledProgram->getHasFeedback()) {
+    exception("called computeFeedback(), but program does not have feedback");
+  }
+
+  glEnable(GL_RASTERIZER_DISCARD);
+
+  glUseProgram(compiledProgram->getHandle());
+  checkGLError();
+
+  bindForFeedback();
+
+  glBindVertexArray(vaoHandle);
+
+  if (usePrimitiveRestart) {
+    glEnable(GL_PRIMITIVE_RESTART);
+    glPrimitiveRestartIndex(restartIndex);
+  }
+
+  activateTextures();
+
+  switch (drawMode) {
+  case DrawMode::Points:
+    glBeginTransformFeedback(GL_POINTS);
+    glDrawArrays(GL_POINTS, 0, drawDataLength);
+    break;
+  case DrawMode::IndexedPoints:
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, indexVBO);
+    glBeginTransformFeedback(GL_POINTS);
+    glDrawElements(GL_POINTS, drawDataLength, GL_UNSIGNED_INT, 0);
+    break;
+  case DrawMode::Triangles:
+    glDrawArrays(GL_TRIANGLES, 0, drawDataLength);
+    break;
+  case DrawMode::Lines:
+    glBeginTransformFeedback(GL_TRIANGLES);
+    glDrawArrays(GL_LINES, 0, drawDataLength);
+    break;
+  case DrawMode::TrianglesAdjacency:
+    glBeginTransformFeedback(GL_TRIANGLES_ADJACENCY);
+    glDrawArrays(GL_TRIANGLES_ADJACENCY, 0, drawDataLength);
+    break;
+  case DrawMode::LinesAdjacency:
+    glBeginTransformFeedback(GL_LINES_ADJACENCY);
+    glDrawArrays(GL_LINES_ADJACENCY, 0, drawDataLength);
+    break;
+  case DrawMode::IndexedLines:
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, indexVBO);
+    glBeginTransformFeedback(GL_LINES);
+    glDrawElements(GL_LINES, drawDataLength, GL_UNSIGNED_INT, 0);
+    break;
+  case DrawMode::IndexedLineStrip:
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, indexVBO);
+    glBeginTransformFeedback(GL_LINE_STRIP);
+    glDrawElements(GL_LINE_STRIP, drawDataLength, GL_UNSIGNED_INT, 0);
+    break;
+  case DrawMode::IndexedLinesAdjacency:
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, indexVBO);
+    glBeginTransformFeedback(GL_LINES_ADJACENCY);
+    glDrawElements(GL_LINES_ADJACENCY, drawDataLength, GL_UNSIGNED_INT, 0);
+    break;
+  case DrawMode::IndexedLineStripAdjacency:
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, indexVBO);
+    glBeginTransformFeedback(GL_LINE_STRIP_ADJACENCY);
+    glDrawElements(GL_LINE_STRIP_ADJACENCY, drawDataLength, GL_UNSIGNED_INT, 0);
+    break;
+  case DrawMode::IndexedTriangles:
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, indexVBO);
+    glBeginTransformFeedback(GL_TRIANGLES);
+    glDrawElements(GL_TRIANGLES, drawDataLength, GL_UNSIGNED_INT, 0);
+    break;
+  }
+
+  glEndTransformFeedback();
+
+  if (usePrimitiveRestart) {
+    glDisable(GL_PRIMITIVE_RESTART);
+  }
+
+  glDisable(GL_RASTERIZER_DISCARD);
+  checkGLError();
+}
+
 void GLShaderProgram::draw() {
   validateData();
 
@@ -2115,6 +2236,10 @@ void GLShaderProgram::draw() {
   switch (drawMode) {
   case DrawMode::Points:
     glDrawArrays(GL_POINTS, 0, drawDataLength);
+    break;
+  case DrawMode::IndexedPoints:
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, indexVBO);
+    glDrawElements(GL_POINTS, drawDataLength, GL_UNSIGNED_INT, 0);
     break;
   case DrawMode::Triangles:
     glDrawArrays(GL_TRIANGLES, 0, drawDataLength);
@@ -2563,7 +2688,6 @@ std::shared_ptr<GLCompiledProgram> GLEngine::getCompiledProgram(const std::strin
   // Build a cache key for the program
   std::string progKey = programKeyFromRules(programName, customRules, defaults);
 
-
   // If the cache doesn't already contain the program, create it and add to cache
   if (compiledProgamCache.find(progKey) == compiledProgamCache.end()) {
 
@@ -2674,6 +2798,10 @@ void GLEngine::populateDefaultShadersAndRules() {
   registerShaderProgram("SCALAR_TEXTURE_COLORMAP", {TEXTURE_DRAW_VERT_SHADER, SCALAR_TEXTURE_COLORMAP}, DrawMode::Triangles);
   registerShaderProgram("BLUR_RGB", {TEXTURE_DRAW_VERT_SHADER, BLUR_RGB}, DrawMode::Triangles);
   registerShaderProgram("TRANSFORMATION_GIZMO_ROT", {TRANSFORMATION_GIZMO_ROT_VERT, TRANSFORMATION_GIZMO_ROT_FRAG}, DrawMode::Triangles);
+  
+  registerShaderProgram("FEEDBACK_GATHER_FLOAT3_VERT_SHADER", {FEEDBACK_GATHER_FLOAT3_VERT_SHADER}, DrawMode::IndexedPoints);
+ 
+
 
   // === Load rules
 
