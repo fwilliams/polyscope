@@ -1656,7 +1656,9 @@ void GLEngine::initialize() {
 
   // Small callback function for GLFW errors
   auto error_print_callback = [](int error, const char* description) {
-    std::cerr << "GLFW emitted error: " << description << std::endl;
+    if (polyscope::options::verbosity > 2) {
+      std::cout << "GLFW emitted error: " << description << std::endl;
+    }
   };
 
   // === Initialize glfw
